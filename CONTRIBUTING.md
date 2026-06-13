@@ -7,7 +7,7 @@ Thanks for considering a contribution to `legacy.css`.
 - Prefer semantic HTML selectors before adding classes.
 - Add classes only for patterns that HTML cannot express naturally.
 - Keep the visual style restrained, practical, and appropriate for administrative systems.
-- Avoid JavaScript dependencies.
+- Avoid runtime JavaScript dependencies.
 - Keep build tooling simple.
 
 ## Development

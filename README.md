@@ -45,6 +45,14 @@ Or import the source entry point in a bundler:
 @import "legacy.css/src/legacy.css";
 ```
 
+For interactive components such as tabs and modal dialogs, include the optional browser script:
+
+```html
+<script src="./node_modules/legacy.css/dist/legacy.min.js" defer></script>
+```
+
+The script exposes `window.LegacyCss` and has no runtime dependency. If jQuery is already present on the page, it also registers small `modal` and `tabs` bridges.
+
 ## CDN
 
 TODO: publish package and document CDN usage.
@@ -92,11 +100,13 @@ src/
   panels.css
   alerts.css
   utilities.css
+  legacy.js
 dist/
 docs/
 ```
 
 `src/legacy.css` is the main entry point and imports the other files in order.
+`src/legacy.js` contains the optional browser behavior for tabs and modal dialogs.
 
 ## Scripts
 
@@ -104,12 +114,13 @@ docs/
 pnpm run lint
 pnpm run build
 pnpm run build:min
+pnpm run build:js
 pnpm run build:all
 pnpm run build:docs
 pnpm run watch
 ```
 
-The build uses Lightning CSS to bundle `src/legacy.css` into `dist/legacy.css` and generate the minified `dist/legacy.min.css`.
+The CSS build uses Lightning CSS to bundle `src/legacy.css` into `dist/legacy.css` and generate `dist/legacy.min.css`. The JavaScript build keeps a readable `dist/legacy.js` copy and uses Vite to generate `dist/legacy.min.js`.
 
 ## Roadmap
 

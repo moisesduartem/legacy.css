@@ -20,6 +20,9 @@ window.LegacyCssI18n = {
         "index.css.body": "Reference the built stylesheet from your HTML.",
         "index.css.bundler":
           "Or import the source entry point from a bundler.",
+        "index.js.header": "Add optional JavaScript",
+        "index.js.body":
+          "Tabs and modal dialogs use the optional browser script.",
         "index.markup.header": "Write semantic HTML",
         "index.markup.body":
           "Native elements such as forms, tables, buttons, fieldsets, and details receive usable defaults without extra classes.",
@@ -84,6 +87,9 @@ window.LegacyCssI18n = {
         "index.css.body": "Referencie a folha de estilos compilada no HTML.",
         "index.css.bundler":
           "Ou importe o ponto de entrada dos fontes em um bundler.",
+        "index.js.header": "Adicionar JavaScript opcional",
+        "index.js.body":
+          "Abas e modais usam o script opcional para navegadores.",
         "index.markup.header": "Escrever HTML semântico",
         "index.markup.body":
           "Elementos nativos como formulários, tabelas, botões, fieldsets e details recebem padrões utilizáveis sem classes extras.",
