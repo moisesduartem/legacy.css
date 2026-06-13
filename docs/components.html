@@ -18,12 +18,33 @@
         <select id="language-select" data-language-select data-i18n-aria-label="common.language"></select>
       </div>
 
-      <nav aria-label="Documentation" data-i18n-aria-label="common.navLabel">
-        <a href="index.html" data-i18n="common.nav.home">Home</a>
-        <a href="components.html" data-i18n="common.nav.components">Components</a>
-      </nav>
+      <div class="sidebar-layout">
+        <aside class="sidebar">
+          <header data-i18n="common.navLabel">Documentation</header>
+          <nav aria-label="Documentation" data-i18n-aria-label="common.navLabel">
+            <a href="index.html" data-i18n="common.nav.home">Home</a>
+            <a href="components.html" aria-current="page" data-i18n="common.nav.components">Components</a>
+            <div class="sidebar-section">
+              <a href="#alerts">Alerts</a>
+              <a href="#toast-notifications">Toast notifications</a>
+              <a href="#badges-toolbar">Badges and toolbar</a>
+              <a href="#sidebar">Sidebar</a>
+              <a href="#panel-details">Panel and details</a>
+              <a href="#progress-loading">Progress and loading</a>
+              <a href="#forms">Forms</a>
+              <a href="#tables">Tables</a>
+              <a href="#pagination">Pagination</a>
+              <a href="#multiselect">Multiselect</a>
+              <a href="#tabs">Tabs</a>
+              <a href="#dragdrop-board">Drag/drop board</a>
+              <a href="#modal-dialog">Modal dialog</a>
+            </div>
+          </nav>
+        </aside>
 
-      <section class="panel docs-example">
+        <div class="sidebar-content">
+
+      <section class="panel docs-example" id="alerts">
         <header>Alerts</header>
         <div class="tabs" data-tabs>
           <div class="tabs-list" role="tablist" aria-label="Alert example">
@@ -64,7 +85,7 @@
         </div>
       </section>
 
-      <section class="panel docs-example">
+      <section class="panel docs-example" id="toast-notifications">
         <header>Toast notifications</header>
         <p>Toast notifications can be created with the optional browser script and dismissed automatically or by the user.</p>
         <div class="tabs" data-tabs>
@@ -112,7 +133,7 @@
         </div>
       </section>
 
-      <section class="panel docs-example">
+      <section class="panel docs-example" id="badges-toolbar">
         <header>Badges and toolbar</header>
         <div class="tabs" data-tabs>
           <div class="tabs-list" role="tablist" aria-label="Badges and toolbar example">
@@ -208,7 +229,59 @@
         </div>
       </section>
 
-      <section class="panel docs-example">
+      <section class="panel docs-example" id="sidebar">
+        <header>Sidebar</header>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Sidebar example">
+            <button type="button" role="tab" id="sidebar-implementation-tab" aria-selected="true" aria-controls="sidebar-implementation">Implementation</button>
+            <button type="button" role="tab" id="sidebar-code-tab" aria-selected="false" aria-controls="sidebar-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="sidebar-implementation" aria-labelledby="sidebar-implementation-tab">
+            <div class="sidebar-layout">
+              <aside class="sidebar">
+                <header>Records</header>
+                <nav aria-label="Record sections">
+                  <a href="#summary" aria-current="page">Summary</a>
+                  <a href="#activity">Activity</a>
+                  <a href="#files">Files</a>
+                  <div class="sidebar-section">
+                    <a href="#settings">Settings</a>
+                  </div>
+                </nav>
+              </aside>
+              <div class="sidebar-content">
+                <section class="panel">
+                  <header>Summary</header>
+                  <p>Use `.sidebar-layout` to pair a fixed navigation column with flexible page content.</p>
+                </section>
+              </div>
+            </div>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="sidebar-code" aria-labelledby="sidebar-code-tab" hidden>
+            <pre>&lt;div class="sidebar-layout"&gt;
+  &lt;aside class="sidebar"&gt;
+    &lt;header&gt;Records&lt;/header&gt;
+    &lt;nav aria-label="Record sections"&gt;
+      &lt;a href="#summary" aria-current="page"&gt;Summary&lt;/a&gt;
+      &lt;a href="#activity"&gt;Activity&lt;/a&gt;
+      &lt;a href="#files"&gt;Files&lt;/a&gt;
+      &lt;div class="sidebar-section"&gt;
+        &lt;a href="#settings"&gt;Settings&lt;/a&gt;
+      &lt;/div&gt;
+    &lt;/nav&gt;
+  &lt;/aside&gt;
+  &lt;div class="sidebar-content"&gt;
+    &lt;section class="panel"&gt;
+      &lt;header&gt;Summary&lt;/header&gt;
+      &lt;p&gt;Page content&lt;/p&gt;
+    &lt;/section&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example" id="panel-details">
         <header>Panel and details</header>
         <div class="tabs" data-tabs>
           <div class="tabs-list" role="tablist" aria-label="Panel example">
@@ -238,7 +311,7 @@
         </div>
       </section>
 
-      <section class="panel docs-example">
+      <section class="panel docs-example" id="progress-loading">
         <header>Progress and loading</header>
         <div class="tabs" data-tabs>
           <div class="tabs-list" role="tablist" aria-label="Progress example">
@@ -456,7 +529,7 @@
         </div>
       </section>
 
-      <section class="panel docs-example">
+      <section class="panel docs-example" id="pagination">
         <header>Pagination</header>
         <p>Use <code>LegacyCss.pagination.setup()</code> to load paged records into a target element. The example uses a local array, but the same callback shape can call a backend.</p>
         <div class="tabs" data-tabs>
@@ -548,7 +621,7 @@
         </div>
       </section>
 
-      <section class="panel docs-example">
+      <section class="panel docs-example" id="multiselect">
         <header>Multiselect</header>
         <p>Use a native <code>&lt;select multiple&gt;</code> with <code>data-multiselect</code> for automatic progressive enhancement.</p>
         <div class="tabs" data-tabs>
@@ -644,7 +717,7 @@
         </div>
       </section>
 
-      <section class="panel docs-example">
+      <section class="panel docs-example" id="tabs">
         <header>Tabs</header>
         <p>Use semantic tab roles, connect each tab with <code>aria-controls</code>, and add <code>data-tabs</code> for automatic behavior.</p>
         <div class="tabs" data-tabs>
@@ -703,7 +776,7 @@
         </div>
       </section>
 
-      <section class="panel docs-example">
+      <section class="panel docs-example" id="dragdrop-board">
         <header>Drag/drop board</header>
         <p>Use native HTML5 drag and drop to reorder items inside a column or move them between columns.</p>
         <div class="tabs" data-tabs>
@@ -765,7 +838,7 @@
         </div>
       </section>
 
-      <section class="panel docs-example">
+      <section class="panel docs-example" id="modal-dialog">
         <header>Modal dialog</header>
         <p>The dialog below is opened by both the vanilla JavaScript API and the optional jQuery bridge.</p>
         <div class="tabs" data-tabs>
@@ -841,6 +914,8 @@
           </div>
         </div>
       </section>
+        </div>
+      </div>
     </main>
     <script>
       document.addEventListener("DOMContentLoaded", function () {

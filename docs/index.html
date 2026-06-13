@@ -16,10 +16,16 @@
         <select id="language-select" data-language-select data-i18n-aria-label="common.language"></select>
       </div>
 
-      <nav aria-label="Documentation" data-i18n-aria-label="common.navLabel">
-        <a href="index.html" data-i18n="common.nav.home">Home</a>
-        <a href="components.html" data-i18n="common.nav.components">Components</a>
-      </nav>
+      <div class="sidebar-layout">
+        <aside class="sidebar">
+          <header data-i18n="common.navLabel">Documentation</header>
+          <nav aria-label="Documentation" data-i18n-aria-label="common.navLabel">
+            <a href="index.html" aria-current="page" data-i18n="common.nav.home">Home</a>
+            <a href="components.html" data-i18n="common.nav.components">Components</a>
+          </nav>
+        </aside>
+
+        <div class="sidebar-content">
 
       <p data-i18n="index.intro">Start with semantic HTML and let legacy.css provide the administrative interface defaults.</p>
 
@@ -98,7 +104,9 @@ and an alert area for validation messages.</pre>
         <p>The server exposes resources for the README, source CSS entry point, built CSS, and every CSS module. It also provides tools to list modules, read a module, inspect design tokens, search selectors or properties, and return semantic HTML snippets for common page patterns.</p>
       </section>
 
-      <p><a href="components.html" data-i18n="index.components.link">View component examples</a></p>
+          <p><a href="components.html" data-i18n="index.components.link">View component examples</a></p>
+        </div>
+      </div>
     </main>
   </body>
 </html>
