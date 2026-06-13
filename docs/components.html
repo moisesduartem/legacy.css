@@ -271,6 +271,102 @@
       </section>
 
       <section class="panel docs-example">
+        <header>Multiselect</header>
+        <p>Use a native <code>&lt;select multiple&gt;</code> with <code>data-multiselect</code> for automatic progressive enhancement.</p>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Multiselect example">
+            <button type="button" role="tab" id="multiselect-implementation-tab" aria-selected="true" aria-controls="multiselect-implementation">Implementation</button>
+            <button type="button" role="tab" id="multiselect-code-tab" aria-selected="false" aria-controls="multiselect-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="multiselect-implementation" aria-labelledby="multiselect-implementation-tab">
+            <form>
+              <label for="reviewers">Reviewers</label>
+              <select id="reviewers" name="reviewers[]" multiple data-multiselect data-placeholder="Choose reviewers">
+                <option value="ana" selected>Ana Costa</option>
+                <option value="bruno">Bruno Lima</option>
+                <option value="carla" selected>Carla Mendes</option>
+                <option value="diego">Diego Rocha</option>
+                <option value="elisa" disabled>Elisa Souza</option>
+              </select>
+              <p id="reviewers-output" role="status">Selected values: ana, carla</p>
+              <p>
+                <button type="button" id="reviewers-default">Select default reviewers</button>
+                <button type="button" id="reviewers-clear">Clear reviewers</button>
+              </p>
+            </form>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="multiselect-code" aria-labelledby="multiselect-code-tab" hidden>
+            <p>HTML with automatic JavaScript behavior:</p>
+            <pre>&lt;label for="reviewers"&gt;Reviewers&lt;/label&gt;
+&lt;select id="reviewers" name="reviewers[]" multiple data-multiselect data-placeholder="Choose reviewers"&gt;
+  &lt;option value="ana" selected&gt;Ana Costa&lt;/option&gt;
+  &lt;option value="bruno"&gt;Bruno Lima&lt;/option&gt;
+  &lt;option value="carla" selected&gt;Carla Mendes&lt;/option&gt;
+  &lt;option value="diego"&gt;Diego Rocha&lt;/option&gt;
+  &lt;option value="elisa" disabled&gt;Elisa Souza&lt;/option&gt;
+&lt;/select&gt;
+&lt;p id="reviewers-output" role="status"&gt;Selected values: ana, carla&lt;/p&gt;
+&lt;p&gt;
+  &lt;button type="button" id="reviewers-default"&gt;Select default reviewers&lt;/button&gt;
+  &lt;button type="button" id="reviewers-clear"&gt;Clear reviewers&lt;/button&gt;
+&lt;/p&gt;</pre>
+            <p>JavaScript API:</p>
+            <pre>&lt;script&gt;
+  LegacyCss.multiselect.setup("#reviewers");
+  LegacyCss.multiselect.open("#reviewers");
+  LegacyCss.multiselect.close("#reviewers");
+  LegacyCss.multiselect.toggle("#reviewers");
+
+  const reviewers = document.getElementById("reviewers");
+  const output = document.getElementById("reviewers-output");
+
+  function getSelectedReviewers() {
+    return Array.from(reviewers.selectedOptions).map((option) =&gt; option.value);
+  }
+
+  function setSelectedReviewers(values) {
+    Array.from(reviewers.options).forEach((option) =&gt; {
+      option.selected = values.includes(option.value);
+    });
+
+    reviewers.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function renderSelectedReviewers() {
+    const values = getSelectedReviewers();
+
+    output.textContent = "Selected values: " + (values.join(", ") || "none");
+  }
+
+  reviewers.addEventListener("change", renderSelectedReviewers);
+  document.getElementById("reviewers-default").addEventListener("click", () =&gt; {
+    setSelectedReviewers(["ana", "carla"]);
+  });
+  document.getElementById("reviewers-clear").addEventListener("click", () =&gt; {
+    setSelectedReviewers([]);
+  });
+  renderSelectedReviewers();
+&lt;/script&gt;</pre>
+            <p>jQuery API:</p>
+            <pre>&lt;script&gt;
+  $("#reviewers").multiselect();
+  $("#reviewers").multiselect("open");
+  $("#reviewers").multiselect("close");
+  $("#reviewers").multiselect("toggle");
+
+  function getSelectedReviewers() {
+    return $("#reviewers").val() || [];
+  }
+
+  function setSelectedReviewers(values) {
+    $("#reviewers").val(values).trigger("change");
+  }
+&lt;/script&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example">
         <header>Tabs</header>
         <p>Use semantic tab roles, connect each tab with <code>aria-controls</code>, and add <code>data-tabs</code> for automatic behavior.</p>
         <div class="tabs" data-tabs>
@@ -471,6 +567,26 @@
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const status = document.getElementById("dragdrop-status");
+        const reviewers = document.getElementById("reviewers");
+        const reviewersOutput = document.getElementById("reviewers-output");
+
+        function getSelectedReviewers() {
+          return Array.from(reviewers.selectedOptions).map((option) => option.value);
+        }
+
+        function setSelectedReviewers(values) {
+          Array.from(reviewers.options).forEach((option) => {
+            option.selected = values.includes(option.value);
+          });
+
+          reviewers.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        function renderSelectedReviewers() {
+          const values = getSelectedReviewers();
+
+          reviewersOutput.textContent = "Selected values: " + (values.join(", ") || "none");
+        }
 
         function describe(action, data) {
           status.textContent =
@@ -487,6 +603,15 @@
             data.toIndex +
             ")";
         }
+
+        reviewers.addEventListener("change", renderSelectedReviewers);
+        document.getElementById("reviewers-default").addEventListener("click", function () {
+          setSelectedReviewers(["ana", "carla"]);
+        });
+        document.getElementById("reviewers-clear").addEventListener("click", function () {
+          setSelectedReviewers([]);
+        });
+        renderSelectedReviewers();
 
         LegacyCss.dragdrop.setup("#request-board", {
           onDrag(data) {

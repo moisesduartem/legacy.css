@@ -45,13 +45,13 @@ Or import the source entry point in a bundler:
 @import "legacy.css/src/legacy.css";
 ```
 
-For interactive components such as tabs, modal dialogs, and drag/drop boards, include the optional browser script:
+For interactive components such as tabs, modal dialogs, multiselect controls, and drag/drop boards, include the optional browser script:
 
 ```html
 <script src="./node_modules/legacy.css/dist/legacy.min.js" defer></script>
 ```
 
-The script exposes `window.LegacyCss` and has no runtime dependency. If jQuery is already present on the page, it also registers small `modal`, `tabs`, and `dragdrop` bridges.
+The script exposes `window.LegacyCss` and has no runtime dependency. If jQuery is already present on the page, it also registers small `modal`, `tabs`, `multiselect`, and `dragdrop` bridges.
 
 ## CDN
 
@@ -93,6 +93,7 @@ src/
   base.css
   typography.css
   forms.css
+  multiselect.css
   buttons.css
   tables.css
   lists.css
@@ -109,7 +110,7 @@ docs/
 ```
 
 `src/legacy.css` is the main entry point and imports the other files in order.
-`src/legacy.js` contains the optional browser behavior for tabs, modal dialogs, and drag/drop boards.
+`src/legacy.js` contains the optional browser behavior for tabs, modal dialogs, multiselect controls, and drag/drop boards.
 
 ## Scripts
 

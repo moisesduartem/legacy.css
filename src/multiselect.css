@@ -1,0 +1,118 @@
+.multiselect {
+  margin: 0 0 var(--legacy-space-2);
+  max-width: 100%;
+  position: relative;
+}
+
+.multiselect-source {
+  display: none;
+}
+
+.multiselect-toggle {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 2rem;
+  text-align: left;
+  width: 100%;
+}
+
+.multiselect-toggle::after {
+  border-left: 0.28rem solid transparent;
+  border-right: 0.28rem solid transparent;
+  border-top: 0.38rem solid var(--legacy-text);
+  content: "";
+  flex: 0 0 auto;
+  margin-left: var(--legacy-space-2);
+}
+
+.multiselect-toggle[aria-expanded="true"]::after {
+  border-bottom: 0.38rem solid var(--legacy-text);
+  border-top: 0;
+}
+
+.multiselect-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multiselect-menu {
+  background: #fff;
+  border: 1px solid var(--legacy-border-dark);
+  box-shadow: 2px 2px 0 rgb(0 0 0 / 18%);
+  display: none;
+  left: 0;
+  margin-top: 1px;
+  max-height: 14rem;
+  min-width: 100%;
+  overflow: auto;
+  padding: var(--legacy-space-1);
+  position: absolute;
+  top: 100%;
+  z-index: 20;
+}
+
+.multiselect.is-open .multiselect-menu {
+  display: block;
+}
+
+.multiselect-option {
+  align-items: start;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--legacy-text);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: var(--legacy-space-1);
+  line-height: var(--legacy-line-height);
+  margin: 0;
+  min-height: auto;
+  padding: 0.2rem var(--legacy-space-1);
+  text-align: left;
+  width: 100%;
+}
+
+.multiselect-option::before {
+  background: #fff;
+  border: 1px solid var(--legacy-border-dark);
+  content: "";
+  flex: 0 0 auto;
+  height: 0.85rem;
+  margin-top: 0.15rem;
+  width: 0.85rem;
+}
+
+.multiselect-option:hover,
+.multiselect-option:focus {
+  background: var(--legacy-info-bg);
+  outline: 1px solid var(--legacy-info-border);
+  outline-offset: -1px;
+}
+
+.multiselect-option[aria-selected="true"]::before {
+  background:
+    linear-gradient(45deg, transparent 45%, var(--legacy-primary-dark) 45% 58%, transparent 58%),
+    linear-gradient(-45deg, transparent 48%, var(--legacy-primary-dark) 48% 62%, transparent 62%),
+    #fff;
+}
+
+.multiselect-option[aria-disabled="true"] {
+  color: var(--legacy-muted);
+  cursor: default;
+}
+
+.multiselect-option[aria-disabled="true"]:hover,
+.multiselect-option[aria-disabled="true"]:focus {
+  background: transparent;
+  outline: 0;
+}
+
+.multiselect-empty {
+  color: var(--legacy-muted);
+  padding: var(--legacy-space-1);
+}

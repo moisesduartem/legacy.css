@@ -7,16 +7,20 @@
   const wiredDialogs = new WeakSet();
   const wiredTabs = new WeakSet();
   const wiredDragdropBoards = new WeakSet();
+  const wiredMultiselects = new WeakSet();
+  const multiselectMap = new WeakMap();
   const dragdropOptions = new WeakMap();
   const supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
   const dragdropBoardSelector = "[data-dragdrop], .dragdrop";
   const dragdropColumnSelector = "[data-dragdrop-column], .dragdrop-column";
   const dragdropItemSelector = "[data-dragdrop-item], .dragdrop-item";
+  const multiselectSelector = 'select[multiple][data-multiselect], select[multiple].multiselect-source';
 
   let scrollLockCount = 0;
   let previousBodyOverflow = "";
   let previousHtmlOverflow = "";
   let dragdropState = null;
+  let multiselectId = 0;
 
   const focusableSelector = [
     'a[href]',
@@ -668,12 +672,354 @@
     },
   };
 
+  function resolveMultiselect(target) {
+    if (!target) {
+      return null;
+    }
+
+    if (target.jquery) {
+      return resolveMultiselect(target[0]);
+    }
+
+    if (typeof target === "string") {
+      return resolveMultiselect(document.querySelector(target));
+    }
+
+    if (target.nodeType !== 1) {
+      return null;
+    }
+
+    if (target.matches("select[multiple]")) {
+      return target;
+    }
+
+    const rootElement = target.matches(".multiselect")
+      ? target
+      : target.closest(".multiselect");
+
+    return rootElement ? rootElement.previousElementSibling : null;
+  }
+
+  function getMultiselectPlaceholder(select) {
+    return select.getAttribute("data-placeholder") || "Select options";
+  }
+
+  function getMultiselectName(select) {
+    const ariaLabel = select.getAttribute("aria-label");
+
+    if (ariaLabel) {
+      return ariaLabel;
+    }
+
+    if (!select.id) {
+      return "";
+    }
+
+    try {
+      const label = document.querySelector('label[for="' + CSS.escape(select.id) + '"]');
+
+      return label ? label.textContent.trim() : "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function getMultiselectSelectedOptions(select) {
+    return Array.from(select.options).filter((option) => option.selected);
+  }
+
+  function getMultiselectButtonText(select) {
+    const selectedOptions = getMultiselectSelectedOptions(select);
+
+    if (selectedOptions.length === 0) {
+      return getMultiselectPlaceholder(select);
+    }
+
+    if (selectedOptions.length <= 2) {
+      return selectedOptions.map((option) => option.text).join(", ");
+    }
+
+    return selectedOptions.length + " selected";
+  }
+
+  function getMultiselectOptions(rootElement) {
+    return Array.from(rootElement.querySelectorAll(".multiselect-option"));
+  }
+
+  function updateMultiselect(select) {
+    const state = multiselectMap.get(select);
+
+    if (!state) {
+      return select;
+    }
+
+    state.label.textContent = getMultiselectButtonText(select);
+    state.options.forEach((button, index) => {
+      const option = select.options[index];
+
+      button.setAttribute("aria-selected", option.selected ? "true" : "false");
+      button.setAttribute("aria-disabled", option.disabled ? "true" : "false");
+      button.disabled = option.disabled || select.disabled;
+    });
+
+    state.toggle.disabled = select.disabled;
+
+    return select;
+  }
+
+  function closeMultiselect(select) {
+    const state = multiselectMap.get(select);
+
+    if (!state) {
+      return select;
+    }
+
+    state.root.classList.remove("is-open");
+    state.toggle.setAttribute("aria-expanded", "false");
+
+    return select;
+  }
+
+  function openMultiselect(select) {
+    const state = multiselectMap.get(select);
+
+    if (!state || select.disabled) {
+      return select;
+    }
+
+    document.querySelectorAll(".multiselect.is-open").forEach((rootElement) => {
+      const currentSelect = rootElement.previousElementSibling;
+
+      if (currentSelect !== select) {
+        closeMultiselect(currentSelect);
+      }
+    });
+
+    state.root.classList.add("is-open");
+    state.toggle.setAttribute("aria-expanded", "true");
+
+    return select;
+  }
+
+  function toggleMultiselect(select) {
+    const state = multiselectMap.get(select);
+
+    if (!state) {
+      return select;
+    }
+
+    return state.root.classList.contains("is-open")
+      ? closeMultiselect(select)
+      : openMultiselect(select);
+  }
+
+  function toggleMultiselectOption(select, index) {
+    const option = select.options[index];
+
+    if (!option || option.disabled || select.disabled) {
+      return;
+    }
+
+    option.selected = !option.selected;
+    updateMultiselect(select);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function focusMultiselectOption(rootElement, index) {
+    const options = getMultiselectOptions(rootElement).filter((option) => !option.disabled);
+    const option = options[index];
+
+    if (option) {
+      option.focus();
+    }
+  }
+
+  function handleMultiselectClick(event) {
+    const select = resolveMultiselect(event.currentTarget);
+    const option = event.target.closest(".multiselect-option");
+
+    if (!select) {
+      return;
+    }
+
+    if (option) {
+      toggleMultiselectOption(select, Number(option.getAttribute("data-index")));
+      return;
+    }
+
+    if (event.target.closest(".multiselect-toggle")) {
+      toggleMultiselect(select);
+    }
+  }
+
+  function handleMultiselectKeydown(event) {
+    const select = resolveMultiselect(event.currentTarget);
+    const state = select ? multiselectMap.get(select) : null;
+
+    if (!state) {
+      return;
+    }
+
+    if (event.key === "Escape") {
+      closeMultiselect(select);
+      state.toggle.focus();
+      return;
+    }
+
+    if (event.target === state.toggle) {
+      if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openMultiselect(select);
+        focusMultiselectOption(state.root, 0);
+      }
+
+      return;
+    }
+
+    const options = getMultiselectOptions(state.root).filter((option) => !option.disabled);
+    const currentIndex = options.indexOf(event.target);
+
+    if (currentIndex < 0) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusMultiselectOption(state.root, (currentIndex + 1) % options.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      focusMultiselectOption(state.root, (currentIndex - 1 + options.length) % options.length);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusMultiselectOption(state.root, 0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusMultiselectOption(state.root, options.length - 1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleMultiselectOption(select, Number(event.target.getAttribute("data-index")));
+    }
+  }
+
+  function handleDocumentMultiselectClick(event) {
+    document.querySelectorAll(".multiselect.is-open").forEach((rootElement) => {
+      if (!rootElement.contains(event.target)) {
+        closeMultiselect(rootElement.previousElementSibling);
+      }
+    });
+  }
+
+  function createMultiselectOption(option, index, rootId) {
+    const button = document.createElement("button");
+
+    button.className = "multiselect-option";
+    button.type = "button";
+    button.id = rootId + "-option-" + index;
+    button.setAttribute("role", "option");
+    button.setAttribute("data-index", String(index));
+    button.textContent = option.text;
+
+    return button;
+  }
+
+  function setupMultiselect(target) {
+    const select = resolveMultiselect(target);
+
+    if (!select || !select.matches("select[multiple]")) {
+      return null;
+    }
+
+    if (wiredMultiselects.has(select)) {
+      updateMultiselect(select);
+      return select;
+    }
+
+    const rootElement = document.createElement("div");
+    const toggle = document.createElement("button");
+    const label = document.createElement("span");
+    const menu = document.createElement("div");
+    const rootId = select.id || select.name || "multiselect-" + ++multiselectId;
+    const menuId = rootId + "-menu";
+    const options = Array.from(select.options).map((option, index) =>
+      createMultiselectOption(option, index, rootId)
+    );
+
+    rootElement.className = "multiselect";
+    toggle.className = "multiselect-toggle";
+    toggle.id = rootId + "-toggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-haspopup", "listbox");
+    toggle.setAttribute("aria-controls", menuId);
+    label.className = "multiselect-label";
+    menu.className = "multiselect-menu";
+    menu.id = menuId;
+    menu.setAttribute("role", "listbox");
+    menu.setAttribute("aria-multiselectable", "true");
+
+    const name = getMultiselectName(select);
+
+    if (name) {
+      toggle.setAttribute("aria-label", name);
+    }
+
+    toggle.append(label);
+
+    if (options.length === 0) {
+      const empty = document.createElement("div");
+
+      empty.className = "multiselect-empty";
+      empty.textContent = "No options";
+      menu.append(empty);
+    } else {
+      options.forEach((option) => menu.append(option));
+    }
+
+    rootElement.append(toggle, menu);
+    select.classList.add("multiselect-source");
+    select.after(rootElement);
+
+    multiselectMap.set(select, { label, menu, options, root: rootElement, toggle });
+    wiredMultiselects.add(select);
+    rootElement.addEventListener("click", handleMultiselectClick);
+    rootElement.addEventListener("keydown", handleMultiselectKeydown);
+    select.addEventListener("change", () => updateMultiselect(select));
+
+    if (select.form) {
+      select.form.addEventListener("reset", () => {
+        setTimeout(() => updateMultiselect(select), 0);
+      });
+    }
+
+    updateMultiselect(select);
+
+    return select;
+  }
+
+  legacy.multiselect = {
+    setup(target) {
+      return setupMultiselect(target);
+    },
+    open(target) {
+      return openMultiselect(resolveMultiselect(target));
+    },
+    close(target) {
+      return closeMultiselect(resolveMultiselect(target));
+    },
+    toggle(target) {
+      return toggleMultiselect(resolveMultiselect(target));
+    },
+  };
+
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-tabs], .tabs").forEach(setupTabs);
     document.querySelectorAll(dragdropBoardSelector).forEach((board) => {
       setupDragdrop(board);
     });
+    document.querySelectorAll(multiselectSelector).forEach(setupMultiselect);
   });
+
+  document.addEventListener("click", handleDocumentMultiselectClick);
 
   if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.modal) {
     root.jQuery.fn.modal = function (action) {
@@ -712,6 +1058,29 @@
     root.jQuery.fn.dragdrop = function (options) {
       return this.each(function () {
         legacy.dragdrop.setup(this, options);
+      });
+    };
+  }
+
+  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.multiselect) {
+    root.jQuery.fn.multiselect = function (action) {
+      return this.each(function () {
+        if (action === "open") {
+          legacy.multiselect.open(this);
+          return;
+        }
+
+        if (action === "close") {
+          legacy.multiselect.close(this);
+          return;
+        }
+
+        if (action === "toggle") {
+          legacy.multiselect.toggle(this);
+          return;
+        }
+
+        legacy.multiselect.setup(this);
       });
     };
   }
