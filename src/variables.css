@@ -1,0 +1,38 @@
+:root {
+  color-scheme: light;
+
+  --legacy-font-sans: verdana, arial, helvetica, sans-serif;
+  --legacy-font-mono: "Courier New", courier, monospace;
+  --legacy-font-size: 12px;
+  --legacy-page-bg: #d9d9d9;
+  --legacy-surface: #f4f4f4;
+  --legacy-surface-raised: #fff;
+  --legacy-border: #9a9a9a;
+  --legacy-border-dark: #666;
+  --legacy-text: #1f1f1f;
+  --legacy-muted: #555;
+  --legacy-link: #0645ad;
+  --legacy-link-visited: #551a8b;
+  --legacy-primary: #0b4f8a;
+  --legacy-primary-dark: #07355d;
+  --legacy-focus: #f4c430;
+  --legacy-danger-bg: #f8d7da;
+  --legacy-danger-border: #b94a48;
+  --legacy-warning-bg: #fff3cd;
+  --legacy-warning-border: #c79c00;
+  --legacy-success-bg: #dff0d8;
+  --legacy-success-border: #468847;
+  --legacy-info-bg: #d9edf7;
+  --legacy-info-border: #3a87ad;
+  --legacy-radius: 2px;
+  --legacy-button-bg-top: #fdfdfd;
+  --legacy-button-bg-bottom: #d5d5d5;
+  --legacy-button-hover-bottom: #c6d3df;
+  --legacy-button-border: #7f7f7f;
+  --legacy-space-1: 0.25rem;
+  --legacy-space-2: 0.5rem;
+  --legacy-space-3: 0.75rem;
+  --legacy-space-4: 1rem;
+  --legacy-space-6: 1.5rem;
+  --legacy-line-height: 1.45;
+}

@@ -1,0 +1,31 @@
+table {
+  background: var(--legacy-surface-raised);
+  border: 1px solid var(--legacy-border-dark);
+  border-collapse: collapse;
+  margin: 0 0 var(--legacy-space-4);
+  width: 100%;
+}
+
+caption {
+  color: var(--legacy-primary-dark);
+  font-weight: 700;
+  margin-bottom: var(--legacy-space-2);
+  text-align: left;
+}
+
+th,
+td {
+  border: 1px solid var(--legacy-border);
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #d6e3f0;
+  color: var(--legacy-primary-dark);
+}
+
+tbody tr:nth-child(even) {
+  background: #f7f7f7;
+}

@@ -1,0 +1,43 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--legacy-page-bg);
+  color: var(--legacy-text);
+  font-family: var(--legacy-font-sans);
+  font-size: var(--legacy-font-size);
+  line-height: var(--legacy-line-height);
+}
+
+body {
+  margin: 0 auto;
+  max-width: 1120px;
+  min-height: 100vh;
+  padding: var(--legacy-space-4);
+}
+
+main {
+  background: var(--legacy-surface);
+  border: 1px solid var(--legacy-border);
+  padding: var(--legacy-space-4);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--legacy-border);
+  margin: var(--legacy-space-4) 0;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--legacy-font-mono);
+}

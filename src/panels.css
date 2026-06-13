@@ -1,0 +1,22 @@
+.container {
+  margin: 0 auto;
+  max-width: 1120px;
+}
+
+.panel {
+  background: var(--legacy-surface-raised);
+  border: 1px solid var(--legacy-border);
+  margin: 0 0 var(--legacy-space-4);
+}
+
+.panel > header {
+  background: #d6e3f0;
+  border-bottom: 1px solid var(--legacy-border);
+  color: var(--legacy-primary-dark);
+  font-weight: 700;
+  padding: var(--legacy-space-2) var(--legacy-space-3);
+}
+
+.panel > :not(header) {
+  padding: var(--legacy-space-3);
+}

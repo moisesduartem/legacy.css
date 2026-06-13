@@ -1,0 +1,18 @@
+nav {
+  background: var(--legacy-primary);
+  border: 1px solid var(--legacy-primary-dark);
+  margin: 0 0 var(--legacy-space-4);
+  padding: var(--legacy-space-2);
+}
+
+nav a,
+nav a:visited {
+  color: #fff;
+  display: inline-block;
+  font-weight: 700;
+  margin-right: var(--legacy-space-3);
+}
+
+nav a:hover {
+  background: var(--legacy-primary-dark);
+}

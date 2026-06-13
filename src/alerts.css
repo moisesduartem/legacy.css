@@ -1,0 +1,21 @@
+.alert {
+  background: var(--legacy-info-bg);
+  border: 1px solid var(--legacy-info-border);
+  margin: 0 0 var(--legacy-space-4);
+  padding: var(--legacy-space-3);
+}
+
+.alert-success {
+  background: var(--legacy-success-bg);
+  border-color: var(--legacy-success-border);
+}
+
+.alert-warning {
+  background: var(--legacy-warning-bg);
+  border-color: var(--legacy-warning-border);
+}
+
+.alert-danger {
+  background: var(--legacy-danger-bg);
+  border-color: var(--legacy-danger-border);
+}

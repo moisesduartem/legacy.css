@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>legacy.css - formularios</title>
+    <link rel="stylesheet" href="assets/legacy.css">
+  </head>
+  <body>
+    <main>
+      <h1>Formulario completo</h1>
+
+      <nav aria-label="Exemplos">
+        <a href="index.html">Inicio</a>
+        <a href="forms.html">Formularios</a>
+        <a href="tables.html">Tabelas</a>
+        <a href="components.html">Componentes</a>
+      </nav>
+
+      <form>
+        <fieldset>
+          <legend>Dados cadastrais</legend>
+
+          <label for="name">Nome completo</label>
+          <input id="name" name="name" type="text" placeholder="Maria Silva">
+
+          <label for="email">E-mail</label>
+          <input id="email" name="email" type="email" placeholder="maria@example.com">
+
+          <label for="department">Departamento</label>
+          <select id="department" name="department">
+            <option>Financeiro</option>
+            <option>Recursos humanos</option>
+            <option>Operacoes</option>
+          </select>
+        </fieldset>
+
+        <fieldset>
+          <legend>Preferencias</legend>
+
+          <label>
+            <input name="newsletter" type="checkbox">
+            Receber comunicados internos
+          </label>
+
+          <label>
+            <input name="profile" type="radio" value="user">
+            Usuario
+          </label>
+
+          <label>
+            <input name="profile" type="radio" value="manager">
+            Gestor
+          </label>
+
+          <label for="notes">Observacoes</label>
+          <textarea id="notes" name="notes"></textarea>
+        </fieldset>
+
+        <button type="submit">Salvar</button>
+        <button type="reset">Limpar</button>
+      </form>
+    </main>
+  </body>
+</html>

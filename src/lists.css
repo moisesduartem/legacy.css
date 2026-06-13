@@ -1,0 +1,21 @@
+ul,
+ol {
+  margin: 0 0 var(--legacy-space-4) var(--legacy-space-6);
+  padding: 0;
+}
+
+li {
+  margin-bottom: var(--legacy-space-1);
+}
+
+dl {
+  margin: 0 0 var(--legacy-space-4);
+}
+
+dt {
+  font-weight: 700;
+}
+
+dd {
+  margin: 0 0 var(--legacy-space-2) var(--legacy-space-4);
+}
