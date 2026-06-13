@@ -21,6 +21,7 @@ const cssModules = [
   "pagination.css",
   "panels.css",
   "modal.css",
+  "popover.css",
   "tabs.css",
   "dragdrop.css",
   "progress.css",
@@ -118,6 +119,21 @@ const snippets = {
     html: `<button type="button" onclick="LegacyCss.toast.show({ title: 'Salvo', message: 'Registro atualizado.', type: 'success', position: 'top-right' })">
   Mostrar notificação
 </button>`,
+  },
+  popover: {
+    title: "Popover",
+    html: `<button type="button" data-popover-target="#actions-popover">
+  Mostrar ações
+</button>
+
+<div class="popover" id="actions-popover" hidden aria-labelledby="actions-popover-title">
+  <header id="actions-popover-title">Ações</header>
+  <p>Escolha a próxima etapa administrativa.</p>
+  <div class="popover-actions">
+    <button type="button">Atribuir</button>
+    <button type="button">Arquivar</button>
+  </div>
+</div>`,
   },
 };
 

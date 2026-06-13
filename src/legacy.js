@@ -6,6 +6,7 @@
   const fallbackDialogs = new WeakSet();
   const wiredDialogs = new WeakSet();
   const wiredTabs = new WeakSet();
+  const wiredPopoverTriggers = new WeakSet();
   const wiredDragdropBoards = new WeakSet();
   const wiredMultiselects = new WeakSet();
   const wiredPaginations = new WeakSet();
@@ -20,12 +21,14 @@
   const dragdropItemSelector = "[data-dragdrop-item], .dragdrop-item";
   const multiselectSelector = 'select[multiple][data-multiselect], select[multiple].multiselect-source';
   const paginationSelector = "[data-pagination], .pagination";
+  const popoverTriggerSelector = "[data-popover-target], [data-popover]";
 
   let scrollLockCount = 0;
   let previousBodyOverflow = "";
   let previousHtmlOverflow = "";
   let dragdropState = null;
   let multiselectId = 0;
+  let openPopoverTrigger = null;
 
   const focusableSelector = [
     'a[href]',
@@ -474,6 +477,280 @@
     },
     clear(target) {
       return clearToasts(target);
+    },
+  };
+
+  function resolveElement(target) {
+    if (!target) {
+      return null;
+    }
+
+    if (target.jquery) {
+      return resolveElement(target[0]);
+    }
+
+    if (typeof target === "string") {
+      return document.querySelector(target);
+    }
+
+    return target.nodeType === 1 ? target : null;
+  }
+
+  function resolvePopoverTrigger(target) {
+    const element = resolveElement(target);
+
+    if (!element) {
+      return null;
+    }
+
+    if (element.matches(popoverTriggerSelector)) {
+      return element;
+    }
+
+    return element.closest(popoverTriggerSelector);
+  }
+
+  function resolvePopover(target) {
+    const element = resolveElement(target);
+
+    if (!element) {
+      return null;
+    }
+
+    if (element.matches(".popover, [data-popover-content]")) {
+      return element;
+    }
+
+    const trigger = resolvePopoverTrigger(element);
+
+    return trigger ? getTriggerPopover(trigger) : null;
+  }
+
+  function getTriggerPopover(trigger) {
+    const target =
+      trigger.getAttribute("data-popover-target") ||
+      trigger.getAttribute("data-popover") ||
+      trigger.getAttribute("aria-controls");
+
+    if (!target) {
+      return null;
+    }
+
+    if (target.charAt(0) === "#") {
+      return document.querySelector(target);
+    }
+
+    return document.getElementById(target);
+  }
+
+  function getPopoverPlacement(trigger) {
+    const placement = trigger.getAttribute("data-popover-placement");
+
+    return ["top", "right", "bottom", "left"].includes(placement)
+      ? placement
+      : "bottom";
+  }
+
+  function positionPopover(trigger, popover) {
+    const gap = 4;
+    const margin = 8;
+    const placement = getPopoverPlacement(trigger);
+    const triggerRect = trigger.getBoundingClientRect();
+    const popoverRect = popover.getBoundingClientRect();
+    let top = triggerRect.bottom + gap;
+    let left = triggerRect.left;
+
+    if (placement === "top") {
+      top = triggerRect.top - popoverRect.height - gap;
+      left = triggerRect.left;
+    } else if (placement === "right") {
+      top = triggerRect.top;
+      left = triggerRect.right + gap;
+    } else if (placement === "left") {
+      top = triggerRect.top;
+      left = triggerRect.left - popoverRect.width - gap;
+    }
+
+    top = Math.max(
+      margin,
+      Math.min(top, window.innerHeight - popoverRect.height - margin)
+    );
+    left = Math.max(
+      margin,
+      Math.min(left, window.innerWidth - popoverRect.width - margin)
+    );
+
+    popover.style.top = top + "px";
+    popover.style.left = left + "px";
+  }
+
+  function closePopover(trigger) {
+    const currentTrigger = trigger || openPopoverTrigger;
+    const popover = currentTrigger ? getTriggerPopover(currentTrigger) : null;
+
+    if (!currentTrigger || !popover) {
+      return null;
+    }
+
+    popover.hidden = true;
+    currentTrigger.setAttribute("aria-expanded", "false");
+
+    if (openPopoverTrigger === currentTrigger) {
+      openPopoverTrigger = null;
+    }
+
+    return popover;
+  }
+
+  function openPopover(trigger) {
+    const popover = trigger ? getTriggerPopover(trigger) : null;
+
+    if (!trigger || !popover) {
+      return null;
+    }
+
+    if (openPopoverTrigger && openPopoverTrigger !== trigger) {
+      closePopover(openPopoverTrigger);
+    }
+
+    wirePopoverTrigger(trigger);
+    popover.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    openPopoverTrigger = trigger;
+    positionPopover(trigger, popover);
+
+    return popover;
+  }
+
+  function togglePopover(trigger) {
+    const popover = trigger ? getTriggerPopover(trigger) : null;
+
+    if (!popover) {
+      return null;
+    }
+
+    return popover.hidden ? openPopover(trigger) : closePopover(trigger);
+  }
+
+  function handlePopoverClick(event) {
+    event.preventDefault();
+    togglePopover(event.currentTarget);
+  }
+
+  function handlePopoverKeydown(event) {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    const trigger = event.currentTarget;
+    const popover = getTriggerPopover(trigger);
+
+    if (!popover || popover.hidden) {
+      return;
+    }
+
+    event.preventDefault();
+    closePopover(trigger);
+    trigger.focus();
+  }
+
+  function handleDocumentPopoverClick(event) {
+    if (!openPopoverTrigger) {
+      return;
+    }
+
+    const popover = getTriggerPopover(openPopoverTrigger);
+
+    if (
+      openPopoverTrigger.contains(event.target) ||
+      (popover && popover.contains(event.target))
+    ) {
+      return;
+    }
+
+    closePopover(openPopoverTrigger);
+  }
+
+  function handleDocumentPopoverKeydown(event) {
+    if (event.key !== "Escape" || !openPopoverTrigger) {
+      return;
+    }
+
+    event.preventDefault();
+    closePopover(openPopoverTrigger);
+  }
+
+  function updateOpenPopoverPosition() {
+    if (!openPopoverTrigger) {
+      return;
+    }
+
+    const popover = getTriggerPopover(openPopoverTrigger);
+
+    if (popover && !popover.hidden) {
+      positionPopover(openPopoverTrigger, popover);
+    }
+  }
+
+  function wirePopoverTrigger(trigger) {
+    const popover = getTriggerPopover(trigger);
+
+    if (!popover) {
+      return trigger;
+    }
+
+    if (!popover.id && trigger.getAttribute("data-popover-target")) {
+      popover.id = trigger.getAttribute("data-popover-target").replace(/^#/, "");
+    }
+
+    trigger.setAttribute("aria-haspopup", "dialog");
+    trigger.setAttribute("aria-expanded", popover.hidden ? "false" : "true");
+
+    if (popover.id) {
+      trigger.setAttribute("aria-controls", popover.id);
+    }
+
+    if (!popover.hasAttribute("role")) {
+      popover.setAttribute("role", "dialog");
+    }
+
+    if (!wiredPopoverTriggers.has(trigger)) {
+      wiredPopoverTriggers.add(trigger);
+      trigger.addEventListener("click", handlePopoverClick);
+      trigger.addEventListener("keydown", handlePopoverKeydown);
+    }
+
+    return trigger;
+  }
+
+  function setupPopover(target) {
+    const trigger = resolvePopoverTrigger(target);
+
+    return trigger ? wirePopoverTrigger(trigger) : null;
+  }
+
+  legacy.popover = {
+    setup(target) {
+      return setupPopover(target);
+    },
+    open(target) {
+      return openPopover(resolvePopoverTrigger(target));
+    },
+    close(target) {
+      const trigger = resolvePopoverTrigger(target);
+
+      if (trigger) {
+        return closePopover(trigger);
+      }
+
+      const popover = resolvePopover(target);
+
+      return popover && openPopoverTrigger && getTriggerPopover(openPopoverTrigger) === popover
+        ? closePopover(openPopoverTrigger)
+        : popover;
+    },
+    toggle(target) {
+      return togglePopover(resolvePopoverTrigger(target));
     },
   };
 
@@ -1641,6 +1918,7 @@
   };
 
   document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(popoverTriggerSelector).forEach(setupPopover);
     document.querySelectorAll("[data-tabs], .tabs").forEach(setupTabs);
     document.querySelectorAll(dragdropBoardSelector).forEach((board) => {
       setupDragdrop(board);
@@ -1652,6 +1930,10 @@
   });
 
   document.addEventListener("click", handleDocumentMultiselectClick);
+  document.addEventListener("click", handleDocumentPopoverClick);
+  document.addEventListener("keydown", handleDocumentPopoverKeydown);
+  window.addEventListener("resize", updateOpenPopoverPosition);
+  window.addEventListener("scroll", updateOpenPopoverPosition, true);
 
   if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.modal) {
     root.jQuery.fn.modal = function (action) {
@@ -1701,6 +1983,29 @@
         }
 
         legacy.tabs.setup(this);
+      });
+    };
+  }
+
+  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.popover) {
+    root.jQuery.fn.popover = function (action) {
+      return this.each(function () {
+        if (action === "open") {
+          legacy.popover.open(this);
+          return;
+        }
+
+        if (action === "close") {
+          legacy.popover.close(this);
+          return;
+        }
+
+        if (action === "toggle") {
+          legacy.popover.toggle(this);
+          return;
+        }
+
+        legacy.popover.setup(this);
       });
     };
   }

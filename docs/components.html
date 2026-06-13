@@ -35,6 +35,7 @@
               <a href="#tables">Tables</a>
               <a href="#pagination">Pagination</a>
               <a href="#multiselect">Multiselect</a>
+              <a href="#popover">Popover</a>
               <a href="#tabs">Tabs</a>
               <a href="#dragdrop-board">Drag/drop board</a>
               <a href="#modal-dialog">Modal dialog</a>
@@ -712,6 +713,64 @@
   function setSelectedReviewers(values) {
     $("#reviewers").val(values).trigger("change");
   }
+&lt;/script&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example" id="popover">
+        <header>Popover</header>
+        <p>Use a button with <code>data-popover-target</code> to open contextual content without leaving the current page.</p>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Popover example">
+            <button type="button" role="tab" id="popover-implementation-tab" aria-selected="true" aria-controls="popover-implementation">Implementation</button>
+            <button type="button" role="tab" id="popover-code-tab" aria-selected="false" aria-controls="popover-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="popover-implementation" aria-labelledby="popover-implementation-tab">
+            <p>
+              <button type="button" data-popover-target="#request-actions-popover">Show actions</button>
+              <button type="button" data-popover-target="#request-help-popover" data-popover-placement="right">Show help</button>
+            </p>
+
+            <div class="popover" id="request-actions-popover" hidden aria-labelledby="request-actions-title">
+              <header id="request-actions-title">Request actions</header>
+              <p>Choose the next administrative step for protocol 2026-1842.</p>
+              <div class="popover-actions">
+                <button type="button">Assign</button>
+                <button type="button">Archive</button>
+              </div>
+            </div>
+
+            <div class="popover" id="request-help-popover" hidden aria-labelledby="request-help-title">
+              <header id="request-help-title">Review note</header>
+              <p>Popovers close when another popover opens, when Escape is pressed, or when the page is clicked outside.</p>
+            </div>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="popover-code" aria-labelledby="popover-code-tab" hidden>
+            <p>HTML with automatic JavaScript behavior:</p>
+            <pre>&lt;button type="button" data-popover-target="#request-actions-popover"&gt;Show actions&lt;/button&gt;
+
+&lt;div class="popover" id="request-actions-popover" hidden aria-labelledby="request-actions-title"&gt;
+  &lt;header id="request-actions-title"&gt;Request actions&lt;/header&gt;
+  &lt;p&gt;Choose the next administrative step for protocol 2026-1842.&lt;/p&gt;
+  &lt;div class="popover-actions"&gt;
+    &lt;button type="button"&gt;Assign&lt;/button&gt;
+    &lt;button type="button"&gt;Archive&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+            <p>JavaScript API:</p>
+            <pre>&lt;script&gt;
+  LegacyCss.popover.setup("[data-popover-target]");
+  LegacyCss.popover.open("[data-popover-target]");
+  LegacyCss.popover.close("[data-popover-target]");
+  LegacyCss.popover.toggle("[data-popover-target]");
+&lt;/script&gt;</pre>
+            <p>jQuery API:</p>
+            <pre>&lt;script&gt;
+  $("[data-popover-target]").popover();
+  $("[data-popover-target]").popover("open");
+  $("[data-popover-target]").popover("close");
+  $("[data-popover-target]").popover("toggle");
 &lt;/script&gt;</pre>
           </div>
         </div>
