@@ -18,8 +18,9 @@
     "lint": "stylelint \"src/**/*.css\"",
     "build": "lightningcss --bundle src/legacy.css -o dist/legacy.css",
     "build:min": "lightningcss --bundle --minify src/legacy.css -o dist/legacy.min.css",
-    "build:all": "pnpm run build && pnpm run build:min",
-    "build:docs": "pnpm run build:all && mkdir -p docs/assets && cp dist/legacy.css docs/assets/legacy.css && cp dist/legacy.min.css docs/assets/legacy.min.css",
+    "build:js": "mkdir -p dist && cp src/legacy.js dist/legacy.js",
+    "build:all": "pnpm run build && pnpm run build:min && pnpm run build:js",
+    "build:docs": "pnpm run build:all && mkdir -p docs/assets && cp dist/legacy.css docs/assets/legacy.css && cp dist/legacy.min.css docs/assets/legacy.min.css && cp dist/legacy.js docs/assets/legacy.js",
     "watch": "lightningcss --bundle --watch src/legacy.css -o dist/legacy.css"
   },
   "keywords": [

@@ -292,6 +292,53 @@ nav a:hover {
   padding: var(--legacy-space-3);
 }
 
+dialog.modal {
+  background: var(--legacy-surface-raised);
+  border: 1px solid var(--legacy-border-dark);
+  border-radius: var(--legacy-radius);
+  color: var(--legacy-text);
+  max-width: min(36rem, calc(100vw - var(--legacy-space-4)));
+  width: min(36rem, calc(100vw - var(--legacy-space-4)));
+  padding: 0;
+  box-shadow: 0 16px 40px #00000059;
+}
+
+dialog.modal[open] {
+  display: block;
+}
+
+dialog.modal::backdrop {
+  background: #1f1f1f73;
+}
+
+dialog.modal > header {
+  border-bottom: 1px solid var(--legacy-border);
+  color: var(--legacy-primary-dark);
+  align-items: center;
+  gap: var(--legacy-space-2);
+  padding: var(--legacy-space-2) var(--legacy-space-3);
+  background: #d6e3f0;
+  justify-content: space-between;
+  display: flex;
+}
+
+dialog.modal > :not(header, footer) {
+  padding: var(--legacy-space-3);
+}
+
+dialog.modal > footer {
+  background: var(--legacy-surface);
+  border-top: 1px solid var(--legacy-border);
+  gap: var(--legacy-space-2);
+  padding: var(--legacy-space-3);
+  justify-content: flex-end;
+  display: flex;
+}
+
+dialog.modal button[data-modal-close] {
+  flex: none;
+}
+
 .alert {
   background: var(--legacy-info-bg);
   border: 1px solid var(--legacy-info-border);

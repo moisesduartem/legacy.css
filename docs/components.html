@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="assets/docs.css">
     <script src="assets/i18n.config.js" defer></script>
     <script src="assets/i18n.js" defer></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
+    <script src="assets/legacy.js" defer></script>
   </head>
   <body data-i18n-document-title="components.title">
     <main>
@@ -46,6 +48,41 @@
           <summary data-i18n="components.details.summary">View details</summary>
           <p data-i18n="components.details.body">Additional content displayed on demand.</p>
         </details>
+      </section>
+
+      <section class="panel">
+        <header>Modal dialog</header>
+        <p>The dialog below is opened by both the vanilla API and the optional jQuery bridge.</p>
+        <p>
+          <button type="button" onclick="LegacyCss.modal.open('#login-form')">Open with LegacyCss.modal.open()</button>
+          <button type="button" onclick="$('#login-form').modal()">Open with $('#login-form').modal()</button>
+        </p>
+
+        <dialog id="login-form" class="modal" aria-labelledby="login-form-title">
+          <header>
+            <strong id="login-form-title">Sign in</strong>
+            <button type="button" data-modal-close aria-label="Close dialog">Close</button>
+          </header>
+          <div>
+            <p>Use a semantic <code>&lt;dialog&gt;</code> element with <code>.modal</code> for the legacy chrome and close affordances.</p>
+            <p>
+              <label>
+                User name
+                <input type="text" name="username" autocomplete="username">
+              </label>
+            </p>
+            <p>
+              <label>
+                Password
+                <input type="password" name="password" autocomplete="current-password">
+              </label>
+            </p>
+          </div>
+          <footer>
+            <button type="button" data-modal-close>Cancel</button>
+            <button type="button" onclick="LegacyCss.modal.close('#login-form')">Close via API</button>
+          </footer>
+        </dialog>
       </section>
     </main>
   </body>
