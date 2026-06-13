@@ -330,6 +330,68 @@
       </section>
 
       <section class="panel docs-example">
+        <header>Drag/drop board</header>
+        <p>Use native HTML5 drag and drop to reorder items inside a column or move them between columns.</p>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Drag/drop example">
+            <button type="button" role="tab" id="dragdrop-implementation-tab" aria-selected="true" aria-controls="dragdrop-implementation">Implementation</button>
+            <button type="button" role="tab" id="dragdrop-code-tab" aria-selected="false" aria-controls="dragdrop-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="dragdrop-implementation" aria-labelledby="dragdrop-implementation-tab">
+            <div class="dragdrop" data-dragdrop id="request-board">
+              <section class="dragdrop-column" data-column="todo">
+                <header>To do</header>
+                <article class="dragdrop-item" data-id="request-1">Review supplier registration</article>
+                <article class="dragdrop-item" data-id="request-2">Validate contract attachment</article>
+              </section>
+              <section class="dragdrop-column" data-column="review">
+                <header>In review</header>
+                <article class="dragdrop-item" data-id="request-3">Check tax information</article>
+              </section>
+              <section class="dragdrop-column" data-column="done">
+                <header>Done</header>
+              </section>
+            </div>
+            <p id="dragdrop-status" role="status">No drag/drop activity yet.</p>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="dragdrop-code" aria-labelledby="dragdrop-code-tab" hidden>
+            <p>HTML with automatic JavaScript behavior:</p>
+            <pre>&lt;div class="dragdrop" data-dragdrop id="request-board"&gt;
+  &lt;section class="dragdrop-column" data-column="todo"&gt;
+    &lt;header&gt;To do&lt;/header&gt;
+    &lt;article class="dragdrop-item" data-id="request-1"&gt;Review supplier registration&lt;/article&gt;
+    &lt;article class="dragdrop-item" data-id="request-2"&gt;Validate contract attachment&lt;/article&gt;
+  &lt;/section&gt;
+  &lt;section class="dragdrop-column" data-column="review"&gt;
+    &lt;header&gt;In review&lt;/header&gt;
+    &lt;article class="dragdrop-item" data-id="request-3"&gt;Check tax information&lt;/article&gt;
+  &lt;/section&gt;
+  &lt;section class="dragdrop-column" data-column="done"&gt;
+    &lt;header&gt;Done&lt;/header&gt;
+  &lt;/section&gt;
+&lt;/div&gt;
+&lt;p id="dragdrop-status" role="status"&gt;No drag/drop activity yet.&lt;/p&gt;</pre>
+            <p>JavaScript API:</p>
+            <pre>&lt;script&gt;
+  LegacyCss.dragdrop.setup("#request-board", {
+    onDrag(data) {},
+    onDrop(data) {},
+    onChangeColumn(data) {}
+  });
+&lt;/script&gt;</pre>
+            <p>jQuery API:</p>
+            <pre>&lt;script&gt;
+  $(".dragdrop").dragdrop({
+    onDrag(eventData) {},
+    onDrop(eventData) {},
+    onChangeColumn(eventData) {}
+  });
+&lt;/script&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example">
         <header>Modal dialog</header>
         <p>The dialog below is opened by both the vanilla JavaScript API and the optional jQuery bridge.</p>
         <div class="tabs" data-tabs>
@@ -406,5 +468,46 @@
         </div>
       </section>
     </main>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const status = document.getElementById("dragdrop-status");
+
+        function describe(action, data) {
+          status.textContent =
+            action +
+            ": " +
+            (data.item.getAttribute("data-id") || data.item.textContent.trim()) +
+            " from " +
+            data.fromColumnId +
+            " to " +
+            data.toColumnId +
+            " (" +
+            data.fromIndex +
+            " -> " +
+            data.toIndex +
+            ")";
+        }
+
+        LegacyCss.dragdrop.setup("#request-board", {
+          onDrag(data) {
+            describe("Dragging", data);
+          },
+          onDrop(data) {
+            describe("Dropped", data);
+          },
+          onChangeColumn(data) {
+            describe("Changed column", data);
+          },
+        });
+
+        if (window.jQuery) {
+          $(".dragdrop").dragdrop({
+            onDrop(data) {
+              describe("Dropped with jQuery bridge", data);
+            },
+          });
+        }
+      });
+    </script>
   </body>
 </html>

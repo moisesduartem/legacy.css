@@ -6,11 +6,17 @@
   const fallbackDialogs = new WeakSet();
   const wiredDialogs = new WeakSet();
   const wiredTabs = new WeakSet();
+  const wiredDragdropBoards = new WeakSet();
+  const dragdropOptions = new WeakMap();
   const supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
+  const dragdropBoardSelector = "[data-dragdrop], .dragdrop";
+  const dragdropColumnSelector = "[data-dragdrop-column], .dragdrop-column";
+  const dragdropItemSelector = "[data-dragdrop-item], .dragdrop-item";
 
   let scrollLockCount = 0;
   let previousBodyOverflow = "";
   let previousHtmlOverflow = "";
+  let dragdropState = null;
 
   const focusableSelector = [
     'a[href]',
@@ -434,8 +440,239 @@
     },
   };
 
+  function resolveDragdropBoard(target) {
+    if (!target) {
+      return null;
+    }
+
+    if (target.jquery) {
+      return resolveDragdropBoard(target[0]);
+    }
+
+    if (typeof target === "string") {
+      return document.querySelector(target);
+    }
+
+    if (target.nodeType === 1) {
+      if (target.matches(dragdropBoardSelector)) {
+        return target;
+      }
+
+      return target.closest(dragdropBoardSelector);
+    }
+
+    return null;
+  }
+
+  function getDragdropItems(column) {
+    return Array.from(column.querySelectorAll(dragdropItemSelector)).filter(
+      (item) => item.closest(dragdropColumnSelector) === column
+    );
+  }
+
+  function getDragdropColumnId(column) {
+    return column.getAttribute("data-column") || column.id || null;
+  }
+
+  function getDragdropIndex(item, column) {
+    return getDragdropItems(column).indexOf(item);
+  }
+
+  function getDragdropInsertBefore(column, clientY) {
+    return getDragdropItems(column)
+      .filter((item) => !item.classList.contains("is-dragging"))
+      .reduce(
+        (closest, item) => {
+          const rect = item.getBoundingClientRect();
+          const offset = clientY - rect.top - rect.height / 2;
+
+          if (offset < 0 && offset > closest.offset) {
+            return { offset, item };
+          }
+
+          return closest;
+        },
+        { offset: Number.NEGATIVE_INFINITY, item: null }
+      ).item;
+  }
+
+  function createDragdropPayload(originalEvent, toColumn) {
+    if (!dragdropState) {
+      return null;
+    }
+
+    const destinationColumn = toColumn || dragdropState.item.closest(dragdropColumnSelector);
+
+    return {
+      board: dragdropState.board,
+      item: dragdropState.item,
+      fromColumn: dragdropState.fromColumn,
+      toColumn: destinationColumn,
+      fromColumnId: getDragdropColumnId(dragdropState.fromColumn),
+      toColumnId: destinationColumn ? getDragdropColumnId(destinationColumn) : null,
+      fromIndex: dragdropState.fromIndex,
+      toIndex: destinationColumn ? getDragdropIndex(dragdropState.item, destinationColumn) : -1,
+      originalEvent,
+    };
+  }
+
+  function callDragdropCallback(board, name, payload) {
+    const options = dragdropOptions.get(board) || {};
+    const callback = options[name];
+
+    if (typeof callback === "function") {
+      callback.call(board, payload);
+    }
+  }
+
+  function clearDragdropState() {
+    if (dragdropState) {
+      dragdropState.item.classList.remove("is-dragging");
+      dragdropState.board
+        .querySelectorAll(".is-drag-over")
+        .forEach((column) => column.classList.remove("is-drag-over"));
+    }
+
+    dragdropState = null;
+  }
+
+  function handleDragdropStart(event) {
+    const item = event.target.closest(dragdropItemSelector);
+    const board = resolveDragdropBoard(event.currentTarget);
+
+    if (!item || !board || !board.contains(item)) {
+      return;
+    }
+
+    const fromColumn = item.closest(dragdropColumnSelector);
+
+    if (!fromColumn || !board.contains(fromColumn)) {
+      return;
+    }
+
+    dragdropState = {
+      board,
+      item,
+      fromColumn,
+      fromIndex: getDragdropIndex(item, fromColumn),
+    };
+
+    item.classList.add("is-dragging");
+
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", item.getAttribute("data-id") || item.id || "");
+    }
+
+    callDragdropCallback(board, "onDrag", createDragdropPayload(event, fromColumn));
+  }
+
+  function handleDragdropOver(event) {
+    if (!dragdropState) {
+      return;
+    }
+
+    const column = event.target.closest(dragdropColumnSelector);
+
+    if (!column || !dragdropState.board.contains(column)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "move";
+    }
+
+    dragdropState.board
+      .querySelectorAll(".is-drag-over")
+      .forEach((currentColumn) => {
+        if (currentColumn !== column) {
+          currentColumn.classList.remove("is-drag-over");
+        }
+      });
+
+    column.classList.add("is-drag-over");
+
+    const insertBefore = getDragdropInsertBefore(column, event.clientY);
+    column.insertBefore(dragdropState.item, insertBefore);
+  }
+
+  function handleDragdropDrop(event) {
+    if (!dragdropState) {
+      return;
+    }
+
+    const column = event.target.closest(dragdropColumnSelector);
+
+    if (!column || !dragdropState.board.contains(column)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const payload = createDragdropPayload(event, column);
+    const changedColumn = payload.fromColumn !== payload.toColumn;
+    const changedIndex = payload.fromIndex !== payload.toIndex;
+
+    if (changedColumn || changedIndex) {
+      callDragdropCallback(payload.board, "onDrop", payload);
+
+      if (changedColumn) {
+        callDragdropCallback(payload.board, "onChangeColumn", payload);
+      }
+    }
+
+    clearDragdropState();
+  }
+
+  function handleDragdropEnd() {
+    clearDragdropState();
+  }
+
+  function setupDragdrop(target, options) {
+    const board = resolveDragdropBoard(target);
+
+    if (!board) {
+      return null;
+    }
+
+    if (options !== undefined) {
+      dragdropOptions.set(board, Object.assign({}, dragdropOptions.get(board), options || {}));
+    } else if (!dragdropOptions.has(board)) {
+      dragdropOptions.set(board, {});
+    }
+
+    board.querySelectorAll(dragdropItemSelector).forEach((item) => {
+      if (!item.hasAttribute("draggable")) {
+        item.setAttribute("draggable", "true");
+      }
+    });
+
+    if (wiredDragdropBoards.has(board)) {
+      return board;
+    }
+
+    wiredDragdropBoards.add(board);
+    board.addEventListener("dragstart", handleDragdropStart);
+    board.addEventListener("dragover", handleDragdropOver);
+    board.addEventListener("drop", handleDragdropDrop);
+    board.addEventListener("dragend", handleDragdropEnd);
+
+    return board;
+  }
+
+  legacy.dragdrop = {
+    setup(target, options) {
+      return setupDragdrop(target, options);
+    },
+  };
+
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-tabs], .tabs").forEach(setupTabs);
+    document.querySelectorAll(dragdropBoardSelector).forEach((board) => {
+      setupDragdrop(board);
+    });
   });
 
   if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.modal) {
@@ -467,6 +704,14 @@
         }
 
         legacy.tabs.setup(this);
+      });
+    };
+  }
+
+  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.dragdrop) {
+    root.jQuery.fn.dragdrop = function (options) {
+      return this.each(function () {
+        legacy.dragdrop.setup(this, options);
       });
     };
   }

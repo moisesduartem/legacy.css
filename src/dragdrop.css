@@ -1,0 +1,49 @@
+.dragdrop {
+  align-items: stretch;
+  display: grid;
+  gap: var(--legacy-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  margin: 0 0 var(--legacy-space-4);
+}
+
+.dragdrop-column {
+  background: var(--legacy-surface);
+  border: 1px solid var(--legacy-border);
+  min-height: 8rem;
+  padding: var(--legacy-space-2);
+}
+
+.dragdrop-column > header {
+  background: #d6e3f0;
+  border: 1px solid var(--legacy-border);
+  color: var(--legacy-primary-dark);
+  font-weight: 700;
+  margin: 0 0 var(--legacy-space-2);
+  padding: var(--legacy-space-2);
+}
+
+.dragdrop-column.is-drag-over {
+  background: var(--legacy-info-bg);
+  outline: 2px solid var(--legacy-info-border);
+  outline-offset: -2px;
+}
+
+.dragdrop-item,
+[data-dragdrop-item] {
+  background: var(--legacy-surface-raised);
+  border: 1px solid var(--legacy-border-dark);
+  cursor: move;
+  margin: 0 0 var(--legacy-space-2);
+  padding: var(--legacy-space-2);
+}
+
+.dragdrop-item:focus,
+[data-dragdrop-item]:focus {
+  outline: 2px solid var(--legacy-focus);
+  outline-offset: 1px;
+}
+
+.dragdrop-item.is-dragging,
+[data-dragdrop-item].is-dragging {
+  opacity: 0.55;
+}
