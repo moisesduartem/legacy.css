@@ -25,64 +25,211 @@
         <a href="components.html" data-i18n="common.nav.components">Components</a>
       </nav>
 
-      <section class="alert" data-i18n="components.alert.info">
-        General information about the process.
-      </section>
-
-      <section class="alert alert-success" data-i18n="components.alert.success">
-        Record saved successfully.
-      </section>
-
-      <section class="alert alert-warning" data-i18n="components.alert.warning">
-        There are fields pending review.
-      </section>
-
-      <section class="alert alert-danger" data-i18n="components.alert.danger">
-        The operation could not be completed.
-      </section>
-
-      <section class="panel">
-        <header data-i18n="components.panel.header">Administrative panel</header>
-        <p data-i18n="components.panel.body">Use `.panel` only when semantic HTML does not represent an operational content box.</p>
-        <details>
-          <summary data-i18n="components.details.summary">View details</summary>
-          <p data-i18n="components.details.body">Additional content displayed on demand.</p>
-        </details>
-      </section>
-
-      <section class="panel">
-        <header>Modal dialog</header>
-        <p>The dialog below is opened by both the vanilla API and the optional jQuery bridge.</p>
-        <p>
-          <button type="button" onclick="LegacyCss.modal.open('#login-form')">Open with LegacyCss.modal.open()</button>
-          <button type="button" onclick="$('#login-form').modal()">Open with $('#login-form').modal()</button>
-        </p>
-
-        <dialog id="login-form" class="modal" aria-labelledby="login-form-title">
-          <header>
-            <strong id="login-form-title">Sign in</strong>
-            <button type="button" data-modal-close aria-label="Close dialog">Close</button>
-          </header>
-          <div>
-            <p>Use a semantic <code>&lt;dialog&gt;</code> element with <code>.modal</code> for the legacy chrome and close affordances.</p>
-            <p>
-              <label>
-                User name
-                <input type="text" name="username" autocomplete="username">
-              </label>
-            </p>
-            <p>
-              <label>
-                Password
-                <input type="password" name="password" autocomplete="current-password">
-              </label>
-            </p>
+      <section class="panel docs-example">
+        <header>Alerts</header>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Alert example">
+            <button type="button" role="tab" id="alerts-implementation-tab" aria-selected="true" aria-controls="alerts-implementation">Implementation</button>
+            <button type="button" role="tab" id="alerts-code-tab" aria-selected="false" aria-controls="alerts-code">Code</button>
           </div>
-          <footer>
-            <button type="button" data-modal-close>Cancel</button>
-            <button type="button" onclick="LegacyCss.modal.close('#login-form')">Close via API</button>
-          </footer>
-        </dialog>
+          <div class="tabs-panel" role="tabpanel" id="alerts-implementation" aria-labelledby="alerts-implementation-tab">
+            <section class="alert" data-i18n="components.alert.info">
+              General information about the process.
+            </section>
+            <section class="alert alert-success" data-i18n="components.alert.success">
+              Record saved successfully.
+            </section>
+            <section class="alert alert-warning" data-i18n="components.alert.warning">
+              There are fields pending review.
+            </section>
+            <section class="alert alert-danger" data-i18n="components.alert.danger">
+              The operation could not be completed.
+            </section>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="alerts-code" aria-labelledby="alerts-code-tab" hidden>
+            <pre>&lt;section class="alert"&gt;
+  General information about the process.
+&lt;/section&gt;
+
+&lt;section class="alert alert-success"&gt;
+  Record saved successfully.
+&lt;/section&gt;
+
+&lt;section class="alert alert-warning"&gt;
+  There are fields pending review.
+&lt;/section&gt;
+
+&lt;section class="alert alert-danger"&gt;
+  The operation could not be completed.
+&lt;/section&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example">
+        <header>Panel and details</header>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Panel example">
+            <button type="button" role="tab" id="panel-implementation-tab" aria-selected="true" aria-controls="panel-implementation">Implementation</button>
+            <button type="button" role="tab" id="panel-code-tab" aria-selected="false" aria-controls="panel-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="panel-implementation" aria-labelledby="panel-implementation-tab">
+            <section class="panel">
+              <header data-i18n="components.panel.header">Administrative panel</header>
+              <p data-i18n="components.panel.body">Use `.panel` only when semantic HTML does not represent an operational content box.</p>
+              <details>
+                <summary data-i18n="components.details.summary">View details</summary>
+                <p data-i18n="components.details.body">Additional content displayed on demand.</p>
+              </details>
+            </section>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="panel-code" aria-labelledby="panel-code-tab" hidden>
+            <pre>&lt;section class="panel"&gt;
+  &lt;header&gt;Administrative panel&lt;/header&gt;
+  &lt;p&gt;Use `.panel` only when semantic HTML does not represent an operational content box.&lt;/p&gt;
+  &lt;details&gt;
+    &lt;summary&gt;View details&lt;/summary&gt;
+    &lt;p&gt;Additional content displayed on demand.&lt;/p&gt;
+  &lt;/details&gt;
+&lt;/section&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example">
+        <header>Tabs</header>
+        <p>Use semantic tab roles, connect each tab with <code>aria-controls</code>, and add <code>data-tabs</code> for automatic behavior.</p>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Tabs example">
+            <button type="button" role="tab" id="tabs-implementation-tab" aria-selected="true" aria-controls="tabs-implementation">Implementation</button>
+            <button type="button" role="tab" id="tabs-code-tab" aria-selected="false" aria-controls="tabs-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="tabs-implementation" aria-labelledby="tabs-implementation-tab">
+            <div class="tabs" data-tabs id="request-tabs">
+              <div class="tabs-list" role="tablist" aria-label="Request status">
+                <button type="button" role="tab" id="request-summary-tab" aria-selected="true" aria-controls="request-summary">Summary</button>
+                <button type="button" role="tab" id="request-history-tab" aria-selected="false" aria-controls="request-history">History</button>
+                <button type="button" role="tab" id="request-files-tab" aria-selected="false" aria-controls="request-files">Files</button>
+              </div>
+              <div class="tabs-panel" role="tabpanel" id="request-summary" aria-labelledby="request-summary-tab">
+                <p>Protocol 2026-1842 is waiting for review.</p>
+              </div>
+              <div class="tabs-panel" role="tabpanel" id="request-history" aria-labelledby="request-history-tab" hidden>
+                <p>Created on 06/13/2026 and assigned to Operations.</p>
+              </div>
+              <div class="tabs-panel" role="tabpanel" id="request-files" aria-labelledby="request-files-tab" hidden>
+                <p>No files were attached.</p>
+              </div>
+            </div>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="tabs-code" aria-labelledby="tabs-code-tab" hidden>
+            <p>HTML with automatic JavaScript behavior:</p>
+            <pre>&lt;div class="tabs" data-tabs id="request-tabs"&gt;
+  &lt;div class="tabs-list" role="tablist" aria-label="Request status"&gt;
+    &lt;button type="button" role="tab" id="request-summary-tab" aria-selected="true" aria-controls="request-summary"&gt;Summary&lt;/button&gt;
+    &lt;button type="button" role="tab" id="request-history-tab" aria-selected="false" aria-controls="request-history"&gt;History&lt;/button&gt;
+    &lt;button type="button" role="tab" id="request-files-tab" aria-selected="false" aria-controls="request-files"&gt;Files&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;div class="tabs-panel" role="tabpanel" id="request-summary" aria-labelledby="request-summary-tab"&gt;
+    &lt;p&gt;Protocol 2026-1842 is waiting for review.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div class="tabs-panel" role="tabpanel" id="request-history" aria-labelledby="request-history-tab" hidden&gt;
+    &lt;p&gt;Created on 06/13/2026 and assigned to Operations.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div class="tabs-panel" role="tabpanel" id="request-files" aria-labelledby="request-files-tab" hidden&gt;
+    &lt;p&gt;No files were attached.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+            <p>JavaScript API:</p>
+            <pre>&lt;script&gt;
+  LegacyCss.tabs.setup("#request-tabs");
+  LegacyCss.tabs.select("#request-tabs", 1);
+&lt;/script&gt;</pre>
+            <p>jQuery API:</p>
+            <pre>&lt;script&gt;
+  $("#request-tabs").tabs();
+  $("#request-tabs").tabs("select", 1);
+&lt;/script&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example">
+        <header>Modal dialog</header>
+        <p>The dialog below is opened by both the vanilla JavaScript API and the optional jQuery bridge.</p>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Modal example">
+            <button type="button" role="tab" id="modal-implementation-tab" aria-selected="true" aria-controls="modal-implementation">Implementation</button>
+            <button type="button" role="tab" id="modal-code-tab" aria-selected="false" aria-controls="modal-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="modal-implementation" aria-labelledby="modal-implementation-tab">
+            <p>
+              <button type="button" onclick="LegacyCss.modal.open('#login-form')">Open with LegacyCss.modal.open()</button>
+              <button type="button" onclick="$('#login-form').modal()">Open with $('#login-form').modal()</button>
+            </p>
+
+            <dialog id="login-form" class="modal" aria-labelledby="login-form-title">
+              <header>
+                <strong id="login-form-title">Sign in</strong>
+                <button type="button" data-modal-close aria-label="Close dialog">Close</button>
+              </header>
+              <div>
+                <p>Use a semantic <code>&lt;dialog&gt;</code> element with <code>.modal</code> for the legacy chrome and close affordances.</p>
+                <p>
+                  <label>
+                    User name
+                    <input type="text" name="username" autocomplete="username">
+                  </label>
+                </p>
+                <p>
+                  <label>
+                    Password
+                    <input type="password" name="password" autocomplete="current-password">
+                  </label>
+                </p>
+              </div>
+              <footer>
+                <button type="button" data-modal-close>Cancel</button>
+                <button type="button" onclick="LegacyCss.modal.close('#login-form')">Close via API</button>
+              </footer>
+            </dialog>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="modal-code" aria-labelledby="modal-code-tab" hidden>
+            <p>HTML:</p>
+            <pre>&lt;p&gt;
+  &lt;button type="button" onclick="LegacyCss.modal.open('#login-form')"&gt;Open with LegacyCss.modal.open()&lt;/button&gt;
+  &lt;button type="button" onclick="$('#login-form').modal()"&gt;Open with $('#login-form').modal()&lt;/button&gt;
+&lt;/p&gt;
+
+&lt;dialog id="login-form" class="modal" aria-labelledby="login-form-title"&gt;
+  &lt;header&gt;
+    &lt;strong id="login-form-title"&gt;Sign in&lt;/strong&gt;
+    &lt;button type="button" data-modal-close aria-label="Close dialog"&gt;Close&lt;/button&gt;
+  &lt;/header&gt;
+  &lt;div&gt;
+    &lt;p&gt;Use a semantic &lt;code&gt;&amp;lt;dialog&amp;gt;&lt;/code&gt; element with &lt;code&gt;.modal&lt;/code&gt;.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;footer&gt;
+    &lt;button type="button" data-modal-close&gt;Cancel&lt;/button&gt;
+    &lt;button type="button" onclick="LegacyCss.modal.close('#login-form')"&gt;Close via API&lt;/button&gt;
+  &lt;/footer&gt;
+&lt;/dialog&gt;</pre>
+            <p>JavaScript API:</p>
+            <pre>&lt;script&gt;
+  LegacyCss.modal.open("#login-form");
+  LegacyCss.modal.close("#login-form");
+  LegacyCss.modal.toggle("#login-form");
+&lt;/script&gt;</pre>
+            <p>jQuery API:</p>
+            <pre>&lt;script src="https://code.jquery.com/jquery-3.7.1.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  $("#login-form").modal();
+  $("#login-form").modal("close");
+  $("#login-form").modal("toggle");
+&lt;/script&gt;</pre>
+          </div>
+        </div>
       </section>
     </main>
   </body>

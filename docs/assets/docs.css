@@ -14,3 +14,20 @@
   margin: 0;
   width: auto;
 }
+
+.docs-example {
+  margin-bottom: var(--legacy-space-4);
+}
+
+.docs-example > h2 {
+  margin-top: 0;
+}
+
+.docs-example pre {
+  background: #f7f7f7;
+  border: 1px solid var(--legacy-border);
+  margin: 0;
+  overflow: auto;
+  padding: var(--legacy-space-3);
+  white-space: pre-wrap;
+}

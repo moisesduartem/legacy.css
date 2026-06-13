@@ -5,6 +5,7 @@
   const openerMap = new WeakMap();
   const fallbackDialogs = new WeakSet();
   const wiredDialogs = new WeakSet();
+  const wiredTabs = new WeakSet();
   const supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
 
   let scrollLockCount = 0;
@@ -255,6 +256,188 @@
     },
   };
 
+  function resolveTabs(target) {
+    if (!target) {
+      return null;
+    }
+
+    if (target.jquery) {
+      return resolveTabs(target[0]);
+    }
+
+    if (typeof target === "string") {
+      return document.querySelector(target);
+    }
+
+    if (target.nodeType === 1) {
+      if (target.matches("[data-tabs], .tabs")) {
+        return target;
+      }
+
+      return target.closest("[data-tabs], .tabs");
+    }
+
+    return null;
+  }
+
+  function getTabs(rootElement) {
+    const tabList = Array.from(rootElement.children).find((element) =>
+      element.matches('[role="tablist"], .tabs-list')
+    );
+
+    if (!tabList) {
+      return [];
+    }
+
+    return Array.from(tabList.children).filter((element) =>
+      element.matches('[role="tab"]')
+    );
+  }
+
+  function getTabPanels(rootElement) {
+    return Array.from(rootElement.children).filter((element) =>
+      element.matches('[role="tabpanel"]')
+    );
+  }
+
+  function getTabPanel(rootElement, tab) {
+    const panelId = tab.getAttribute("aria-controls");
+
+    if (!panelId) {
+      return null;
+    }
+
+    try {
+      return rootElement.querySelector("#" + CSS.escape(panelId));
+    } catch (error) {
+      return document.getElementById(panelId);
+    }
+  }
+
+  function selectTab(tab, setFocus) {
+    const rootElement = resolveTabs(tab);
+
+    if (!rootElement || !tab) {
+      return null;
+    }
+
+    getTabs(rootElement).forEach((currentTab) => {
+      const selected = currentTab === tab;
+      const panel = getTabPanel(rootElement, currentTab);
+
+      currentTab.setAttribute("aria-selected", selected ? "true" : "false");
+      currentTab.setAttribute("tabindex", selected ? "0" : "-1");
+
+      if (panel) {
+        panel.hidden = !selected;
+      }
+    });
+
+    if (setFocus) {
+      tab.focus();
+    }
+
+    return tab;
+  }
+
+  function selectTabByIndex(rootElement, index, setFocus) {
+    const tabs = getTabs(rootElement);
+    const tab = tabs[index];
+
+    if (!tab) {
+      return null;
+    }
+
+    return selectTab(tab, setFocus);
+  }
+
+  function handleTabClick(event) {
+    const tab = event.target.closest('[role="tab"]');
+
+    if (tab) {
+      selectTab(tab, false);
+    }
+  }
+
+  function handleTabKeydown(event) {
+    const rootElement = resolveTabs(event.currentTarget);
+    const tabs = getTabs(rootElement);
+    const currentIndex = tabs.indexOf(event.target);
+
+    if (currentIndex < 0) {
+      return;
+    }
+
+    let nextIndex = currentIndex;
+
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      nextIndex = (currentIndex + 1) % tabs.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = tabs.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    selectTabByIndex(rootElement, nextIndex, true);
+  }
+
+  function setupTabs(target) {
+    const rootElement = resolveTabs(target);
+
+    if (!rootElement || wiredTabs.has(rootElement)) {
+      return rootElement;
+    }
+
+    wiredTabs.add(rootElement);
+    rootElement.addEventListener("click", handleTabClick);
+    rootElement.addEventListener("keydown", handleTabKeydown);
+
+    const tabs = getTabs(rootElement);
+    const selectedTab =
+      tabs.find((tab) => tab.getAttribute("aria-selected") === "true") ||
+      tabs[0];
+
+    getTabPanels(rootElement).forEach((panel) => {
+      if (!panel.hasAttribute("tabindex")) {
+        panel.setAttribute("tabindex", "0");
+      }
+    });
+
+    if (selectedTab) {
+      selectTab(selectedTab, false);
+    }
+
+    return rootElement;
+  }
+
+  legacy.tabs = {
+    setup(target) {
+      return setupTabs(target);
+    },
+    select(target, index) {
+      const rootElement = resolveTabs(target);
+
+      if (!rootElement) {
+        return null;
+      }
+
+      if (typeof index === "number") {
+        return selectTabByIndex(rootElement, index, false);
+      }
+
+      return selectTab(rootElement.querySelector(index), false);
+    },
+  };
+
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("[data-tabs], .tabs").forEach(setupTabs);
+  });
+
   if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.modal) {
     root.jQuery.fn.modal = function (action) {
       const method = action || "open";
@@ -271,6 +454,19 @@
         }
 
         legacy.modal.open(this);
+      });
+    };
+  }
+
+  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.tabs) {
+    root.jQuery.fn.tabs = function (action, index) {
+      return this.each(function () {
+        if (action === "select") {
+          legacy.tabs.select(this, index);
+          return;
+        }
+
+        legacy.tabs.setup(this);
       });
     };
   }

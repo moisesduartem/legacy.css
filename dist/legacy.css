@@ -339,6 +339,47 @@ dialog.modal button[data-modal-close] {
   flex: none;
 }
 
+.tabs {
+  margin: 0 0 var(--legacy-space-4);
+}
+
+.tabs-list {
+  border-bottom: 1px solid var(--legacy-border);
+  align-items: end;
+  gap: var(--legacy-space-1);
+  margin: 0;
+  padding: 0;
+  display: flex;
+}
+
+.tabs-list [role="tab"] {
+  border: 1px solid var(--legacy-border);
+  border-radius: var(--legacy-radius) var(--legacy-radius) 0 0;
+  color: var(--legacy-text);
+  cursor: pointer;
+  font: inherit;
+  min-height: auto;
+  padding: var(--legacy-space-2) var(--legacy-space-3);
+  background: linear-gradient(#f6f6f6, #d8d8d8);
+  border-bottom: 0;
+  margin: 0 0 -1px;
+}
+
+.tabs-list [role="tab"][aria-selected="true"] {
+  background: var(--legacy-surface-raised);
+  border-color: var(--legacy-border-dark);
+  border-bottom: 1px solid var(--legacy-surface-raised);
+  color: var(--legacy-primary-dark);
+  font-weight: 700;
+}
+
+.tabs-panel {
+  background: var(--legacy-surface-raised);
+  border: 1px solid var(--legacy-border-dark);
+  padding: var(--legacy-space-3);
+  border-top: 0;
+}
+
 .alert {
   background: var(--legacy-info-bg);
   border: 1px solid var(--legacy-info-border);
