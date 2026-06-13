@@ -95,6 +95,7 @@ src/
   forms.css
   multiselect.css
   buttons.css
+  toolbars.css
   tables.css
   lists.css
   navigation.css
@@ -103,6 +104,7 @@ src/
   tabs.css
   dragdrop.css
   alerts.css
+  badges.css
   utilities.css
   legacy.js
 dist/

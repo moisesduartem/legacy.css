@@ -65,6 +65,102 @@
       </section>
 
       <section class="panel docs-example">
+        <header>Badges and toolbar</header>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Badges and toolbar example">
+            <button type="button" role="tab" id="badges-toolbar-implementation-tab" aria-selected="true" aria-controls="badges-toolbar-implementation">Implementation</button>
+            <button type="button" role="tab" id="badges-toolbar-code-tab" aria-selected="false" aria-controls="badges-toolbar-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="badges-toolbar-implementation" aria-labelledby="badges-toolbar-implementation-tab">
+            <div class="toolbar" role="group" aria-label="Request actions">
+              <div class="toolbar-group">
+                <button type="button" data-i18n="components.toolbar.new">New request</button>
+                <button type="button" data-i18n="components.toolbar.export">Export</button>
+              </div>
+              <div class="toolbar-group">
+                <label for="toolbar-status" data-i18n="tables.header.status">Status</label>
+                <select id="toolbar-status" name="status">
+                  <option data-i18n="components.toolbar.filter">Filter</option>
+                  <option data-i18n="components.badge.open">Open</option>
+                  <option data-i18n="components.badge.review">Review</option>
+                  <option data-i18n="components.badge.done">Done</option>
+                </select>
+              </div>
+              <div class="toolbar-group">
+                <label for="toolbar-search" class="sr-only" data-i18n="components.toolbar.searchLabel">Search requests</label>
+                <input id="toolbar-search" type="search" name="search" data-i18n-placeholder="components.toolbar.search" placeholder="Search">
+              </div>
+            </div>
+
+            <table>
+              <caption data-i18n="tables.caption">Recent requests</caption>
+              <thead>
+                <tr>
+                  <th data-i18n="tables.header.protocol">Protocol</th>
+                  <th data-i18n="tables.header.requester">Requester</th>
+                  <th data-i18n="tables.header.status">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>2026-00127</td>
+                  <td>Ana Costa</td>
+                  <td><span class="badge badge-info" data-i18n="components.badge.open">Open</span></td>
+                </tr>
+                <tr>
+                  <td>2026-00128</td>
+                  <td>Bruno Lima</td>
+                  <td><span class="badge badge-warning" data-i18n="components.badge.review">Review</span></td>
+                </tr>
+                <tr>
+                  <td>2026-00129</td>
+                  <td>Carla Mendes</td>
+                  <td><span class="badge badge-success" data-i18n="components.badge.done">Done</span></td>
+                </tr>
+                <tr>
+                  <td>2026-00130</td>
+                  <td>Diego Rocha</td>
+                  <td><span class="badge badge-danger" data-i18n="components.badge.blocked">Blocked</span></td>
+                </tr>
+                <tr>
+                  <td>2026-00131</td>
+                  <td>Elisa Souza</td>
+                  <td><span class="badge badge-muted" data-i18n="components.badge.archived">Archived</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="badges-toolbar-code" aria-labelledby="badges-toolbar-code-tab" hidden>
+            <pre>&lt;div class="toolbar" role="group" aria-label="Request actions"&gt;
+  &lt;div class="toolbar-group"&gt;
+    &lt;button type="button"&gt;New request&lt;/button&gt;
+    &lt;button type="button"&gt;Export&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;div class="toolbar-group"&gt;
+    &lt;label for="toolbar-status"&gt;Status&lt;/label&gt;
+    &lt;select id="toolbar-status" name="status"&gt;
+      &lt;option&gt;Filter&lt;/option&gt;
+      &lt;option&gt;Open&lt;/option&gt;
+      &lt;option&gt;Review&lt;/option&gt;
+      &lt;option&gt;Done&lt;/option&gt;
+    &lt;/select&gt;
+  &lt;/div&gt;
+  &lt;div class="toolbar-group"&gt;
+    &lt;label for="toolbar-search" class="sr-only"&gt;Search requests&lt;/label&gt;
+    &lt;input id="toolbar-search" type="search" name="search" placeholder="Search"&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;span class="badge badge-info"&gt;Open&lt;/span&gt;
+&lt;span class="badge badge-warning"&gt;Review&lt;/span&gt;
+&lt;span class="badge badge-success"&gt;Done&lt;/span&gt;
+&lt;span class="badge badge-danger"&gt;Blocked&lt;/span&gt;
+&lt;span class="badge badge-muted"&gt;Archived&lt;/span&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example">
         <header>Panel and details</header>
         <div class="tabs" data-tabs>
           <div class="tabs-list" role="tablist" aria-label="Panel example">

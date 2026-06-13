@@ -1,0 +1,39 @@
+.badge {
+  background: var(--legacy-info-bg);
+  border: 1px solid var(--legacy-info-border);
+  border-radius: var(--legacy-radius);
+  color: var(--legacy-text);
+  display: inline-block;
+  font-size: 0.85em;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0.12rem 0.35rem;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.badge-info {
+  background: var(--legacy-info-bg);
+  border-color: var(--legacy-info-border);
+}
+
+.badge-success {
+  background: var(--legacy-success-bg);
+  border-color: var(--legacy-success-border);
+}
+
+.badge-warning {
+  background: var(--legacy-warning-bg);
+  border-color: var(--legacy-warning-border);
+}
+
+.badge-danger {
+  background: var(--legacy-danger-bg);
+  border-color: var(--legacy-danger-border);
+}
+
+.badge-muted {
+  background: var(--legacy-surface);
+  border-color: var(--legacy-border);
+  color: var(--legacy-muted);
+}

@@ -5,6 +5,7 @@
 @import url("./forms.css");
 @import url("./multiselect.css");
 @import url("./buttons.css");
+@import url("./toolbars.css");
 @import url("./tables.css");
 @import url("./navigation.css");
 @import url("./panels.css");
@@ -12,4 +13,5 @@
 @import url("./tabs.css");
 @import url("./dragdrop.css");
 @import url("./alerts.css");
+@import url("./badges.css");
 @import url("./utilities.css");
