@@ -23,6 +23,7 @@ const cssModules = [
   "modal.css",
   "tabs.css",
   "dragdrop.css",
+  "progress.css",
   "alerts.css",
   "badges.css",
   "utilities.css",
@@ -99,6 +100,16 @@ const snippets = {
     <h2>Histórico</h2>
     <p>Eventos recentes do registro.</p>
   </section>
+</div>`,
+  },
+  progress: {
+    title: "Progress and loading",
+    html: `<label for="case-progress">Progresso</label>
+<progress id="case-progress" value="62" max="100">62%</progress>
+<small class="progress-label">62% concluído</small>
+
+<div class="progress progress-loading" role="progressbar" aria-label="Carregando" aria-valuetext="Carregando">
+  <span class="progress-bar"></span>
 </div>`,
   },
 };

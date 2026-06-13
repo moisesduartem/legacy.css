@@ -628,6 +628,114 @@ dialog.modal button[data-modal-close] {
   opacity: .55;
 }
 
+progress, .progress {
+  background: var(--legacy-surface);
+  border: 1px solid var(--legacy-border-dark);
+  border-radius: var(--legacy-radius);
+  color: var(--legacy-primary);
+  height: 1rem;
+  margin: 0 0 var(--legacy-space-3);
+  width: 100%;
+  display: block;
+  overflow: hidden;
+}
+
+progress {
+  appearance: none;
+}
+
+progress::-webkit-progress-bar {
+  background: var(--legacy-surface);
+}
+
+progress::-webkit-progress-value {
+  background: var(--legacy-primary);
+}
+
+progress:not([value]) {
+  background: linear-gradient(45deg,
+      var(--legacy-info-bg) 25%,
+      var(--legacy-surface-raised) 25%,
+      var(--legacy-surface-raised) 50%,
+      var(--legacy-info-bg) 50%,
+      var(--legacy-info-bg) 75%,
+      var(--legacy-surface-raised) 75%,
+      var(--legacy-surface-raised));
+  background-size: 1rem 1rem;
+  animation: 1s linear infinite legacy-progress-loading;
+}
+
+progress:not([value])::-webkit-progress-bar {
+  background: linear-gradient(45deg,
+      var(--legacy-info-bg) 25%,
+      var(--legacy-surface-raised) 25%,
+      var(--legacy-surface-raised) 50%,
+      var(--legacy-info-bg) 50%,
+      var(--legacy-info-bg) 75%,
+      var(--legacy-surface-raised) 75%,
+      var(--legacy-surface-raised));
+  background-size: 1rem 1rem;
+  animation: 1s linear infinite legacy-progress-loading;
+}
+
+progress::-moz-progress-bar {
+  background: var(--legacy-primary);
+}
+
+progress:not([value])::-moz-progress-bar {
+  background: none;
+}
+
+.progress-bar {
+  background: var(--legacy-primary);
+  height: 100%;
+  display: block;
+}
+
+.progress-loading .progress-bar {
+  background: linear-gradient(45deg,
+      var(--legacy-info-bg) 25%,
+      var(--legacy-surface-raised) 25%,
+      var(--legacy-surface-raised) 50%,
+      var(--legacy-info-bg) 50%,
+      var(--legacy-info-bg) 75%,
+      var(--legacy-surface-raised) 75%,
+      var(--legacy-surface-raised));
+  background-size: 1rem 1rem;
+  width: 100%;
+  animation: 1s linear infinite legacy-progress-loading;
+}
+
+.progress-label {
+  color: var(--legacy-muted);
+  margin: calc(var(--legacy-space-2) * -1) 0 var(--legacy-space-3);
+  display: block;
+}
+
+@keyframes legacy-progress-loading {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 1rem 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  progress:not([value]) {
+    animation: none;
+  }
+
+  progress:not([value])::-webkit-progress-bar {
+    animation: none;
+  }
+
+  .progress-loading .progress-bar {
+    animation: none;
+  }
+}
+
 .alert {
   background: var(--legacy-info-bg);
   border: 1px solid var(--legacy-info-border);

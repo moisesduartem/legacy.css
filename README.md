@@ -104,6 +104,7 @@ src/
   modal.css
   tabs.css
   dragdrop.css
+  progress.css
   alerts.css
   badges.css
   utilities.css
@@ -201,11 +202,11 @@ The MCP server helps agents inspect the available CSS modules, find selectors an
 <script src="./node_modules/legacy.css/dist/legacy.min.js" defer></script>
 ```
 
-When reviewing generated pages, keep the project philosophy in mind: start with semantic HTML, rely on native elements first, and use classes only for patterns such as `.container`, `.panel`, `.alert`, `.badge`, `.toolbar`, `.tabs`, `.modal`, `.multiselect`, `.dragdrop`, and `.pagination`.
+When reviewing generated pages, keep the project philosophy in mind: start with semantic HTML, rely on native elements first, and use classes only for patterns such as `.container`, `.panel`, `.alert`, `.badge`, `.toolbar`, `.tabs`, `.modal`, `.multiselect`, `.dragdrop`, `.pagination`, and `.progress`.
 
 ## Roadmap
 
-- Expand coverage for semantic elements such as `details`, `summary`, `dialog`, `progress`, and `meter`.
+- Expand coverage for semantic elements such as `details`, `summary`, `dialog`, and `meter`.
 - Refine form layouts without requiring classes.
 - Add print styles for administrative reports.
 - Add accessibility-focused states for validation and interaction.

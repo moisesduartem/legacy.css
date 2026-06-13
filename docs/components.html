@@ -190,6 +190,48 @@
         </div>
       </section>
 
+      <section class="panel docs-example">
+        <header>Progress and loading</header>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Progress example">
+            <button type="button" role="tab" id="progress-implementation-tab" aria-selected="true" aria-controls="progress-implementation">Implementation</button>
+            <button type="button" role="tab" id="progress-code-tab" aria-selected="false" aria-controls="progress-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="progress-implementation" aria-labelledby="progress-implementation-tab">
+            <label for="case-progress" data-i18n="components.progress.native">Case review progress</label>
+            <progress id="case-progress" value="62" max="100">62%</progress>
+            <small class="progress-label" data-i18n="components.progress.nativeStatus">62% complete</small>
+
+            <span id="export-progress-label" data-i18n="components.progress.custom">Export progress</span>
+            <div class="progress" role="progressbar" aria-labelledby="export-progress-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="38">
+              <span class="progress-bar" style="width: 38%"></span>
+            </div>
+            <small class="progress-label" data-i18n="components.progress.customStatus">38% complete</small>
+
+            <span id="sync-progress-label" data-i18n="components.progress.loading">Synchronizing records</span>
+            <div class="progress progress-loading" role="progressbar" aria-labelledby="sync-progress-label" aria-valuetext="Loading">
+              <span class="progress-bar"></span>
+            </div>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="progress-code" aria-labelledby="progress-code-tab" hidden>
+            <pre>&lt;label for="case-progress"&gt;Case review progress&lt;/label&gt;
+&lt;progress id="case-progress" value="62" max="100"&gt;62%&lt;/progress&gt;
+&lt;small class="progress-label"&gt;62% complete&lt;/small&gt;
+
+&lt;span id="export-progress-label"&gt;Export progress&lt;/span&gt;
+&lt;div class="progress" role="progressbar" aria-labelledby="export-progress-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="38"&gt;
+  &lt;span class="progress-bar" style="width: 38%"&gt;&lt;/span&gt;
+&lt;/div&gt;
+&lt;small class="progress-label"&gt;38% complete&lt;/small&gt;
+
+&lt;span id="sync-progress-label"&gt;Synchronizing records&lt;/span&gt;
+&lt;div class="progress progress-loading" role="progressbar" aria-labelledby="sync-progress-label" aria-valuetext="Loading"&gt;
+  &lt;span class="progress-bar"&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+          </div>
+        </div>
+      </section>
+
       <section class="panel docs-example" id="forms">
         <header>Forms</header>
         <div class="tabs" data-tabs>

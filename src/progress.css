@@ -1,0 +1,117 @@
+progress,
+.progress {
+  background: var(--legacy-surface);
+  border: 1px solid var(--legacy-border-dark);
+  border-radius: var(--legacy-radius);
+  color: var(--legacy-primary);
+  display: block;
+  height: 1rem;
+  margin: 0 0 var(--legacy-space-3);
+  overflow: hidden;
+  width: 100%;
+}
+
+progress {
+  appearance: none;
+}
+
+progress::-webkit-progress-bar {
+  background: var(--legacy-surface);
+}
+
+progress::-webkit-progress-value {
+  background: var(--legacy-primary);
+}
+
+progress:not([value]) {
+  animation: legacy-progress-loading 1s linear infinite;
+  background:
+    linear-gradient(
+      45deg,
+      var(--legacy-info-bg) 25%,
+      var(--legacy-surface-raised) 25%,
+      var(--legacy-surface-raised) 50%,
+      var(--legacy-info-bg) 50%,
+      var(--legacy-info-bg) 75%,
+      var(--legacy-surface-raised) 75%,
+      var(--legacy-surface-raised)
+    );
+  background-size: 1rem 1rem;
+}
+
+progress:not([value])::-webkit-progress-bar {
+  animation: legacy-progress-loading 1s linear infinite;
+  background:
+    linear-gradient(
+      45deg,
+      var(--legacy-info-bg) 25%,
+      var(--legacy-surface-raised) 25%,
+      var(--legacy-surface-raised) 50%,
+      var(--legacy-info-bg) 50%,
+      var(--legacy-info-bg) 75%,
+      var(--legacy-surface-raised) 75%,
+      var(--legacy-surface-raised)
+    );
+  background-size: 1rem 1rem;
+}
+
+progress::-moz-progress-bar {
+  background: var(--legacy-primary);
+}
+
+progress:not([value])::-moz-progress-bar {
+  background: transparent;
+}
+
+.progress-bar {
+  background: var(--legacy-primary);
+  display: block;
+  height: 100%;
+}
+
+.progress-loading .progress-bar {
+  animation: legacy-progress-loading 1s linear infinite;
+  background:
+    linear-gradient(
+      45deg,
+      var(--legacy-info-bg) 25%,
+      var(--legacy-surface-raised) 25%,
+      var(--legacy-surface-raised) 50%,
+      var(--legacy-info-bg) 50%,
+      var(--legacy-info-bg) 75%,
+      var(--legacy-surface-raised) 75%,
+      var(--legacy-surface-raised)
+    );
+  background-size: 1rem 1rem;
+  width: 100%;
+}
+
+.progress-label {
+  color: var(--legacy-muted);
+  display: block;
+  margin: calc(var(--legacy-space-2) * -1) 0 var(--legacy-space-3);
+}
+
+@keyframes legacy-progress-loading {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 1rem 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  progress:not([value]) {
+    animation: none;
+  }
+
+  progress:not([value])::-webkit-progress-bar {
+    animation: none;
+  }
+
+  .progress-loading .progress-bar {
+    animation: none;
+  }
+}
