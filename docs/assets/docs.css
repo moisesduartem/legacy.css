@@ -1,0 +1,16 @@
+.docs-heading-row {
+  align-items: center;
+  display: flex;
+  gap: var(--legacy-space-3);
+  justify-content: space-between;
+  margin-bottom: var(--legacy-space-3);
+}
+
+.docs-heading-row h1 {
+  margin: 0;
+}
+
+.docs-heading-row select {
+  margin: 0;
+  width: auto;
+}
