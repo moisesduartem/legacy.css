@@ -13,6 +13,7 @@
   const dragdropOptions = new WeakMap();
   const paginationOptions = new WeakMap();
   const paginationState = new WeakMap();
+  const toastTimers = new WeakMap();
   const supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
   const dragdropBoardSelector = "[data-dragdrop], .dragdrop";
   const dragdropColumnSelector = "[data-dragdrop-column], .dragdrop-column";
@@ -267,6 +268,212 @@
     },
     toggle(target) {
       return toggleDialogElement(resolveDialog(target));
+    },
+  };
+
+  function resolveToast(target) {
+    if (!target) {
+      return null;
+    }
+
+    if (target.jquery) {
+      return resolveToast(target[0]);
+    }
+
+    if (typeof target === "string") {
+      return document.querySelector(target);
+    }
+
+    if (target.nodeType === 1 && target.matches(".toast, [data-toast]")) {
+      return target;
+    }
+
+    return null;
+  }
+
+  function normalizeToastPosition(position) {
+    return ["top-left", "top-right", "bottom-left", "bottom-right"].includes(
+      position
+    )
+      ? position
+      : "bottom-right";
+  }
+
+  function getToastRegion(position) {
+    const normalizedPosition = normalizeToastPosition(position);
+    let region = document.querySelector(
+      '[data-toast-region][data-position="' +
+        normalizedPosition +
+        '"], .toast-region[data-position="' +
+        normalizedPosition +
+        '"]'
+    );
+
+    if (region) {
+      return region;
+    }
+
+    region = document.createElement("div");
+    region.className = "toast-region";
+    region.dataset.position = normalizedPosition;
+    region.dataset.toastRegion = "";
+    region.setAttribute("aria-live", "polite");
+    region.setAttribute("aria-atomic", "false");
+    document.body.append(region);
+
+    return region;
+  }
+
+  function normalizeToastOptions(message, options) {
+    if (message && typeof message === "object" && !message.nodeType && !message.jquery) {
+      return Object.assign({}, message);
+    }
+
+    return Object.assign({}, options, {
+      message: message && message.jquery ? message[0] : message,
+    });
+  }
+
+  function resolveToastContainer(target) {
+    if (!target) {
+      return null;
+    }
+
+    if (target.jquery) {
+      return resolveToastContainer(target[0]);
+    }
+
+    if (typeof target === "string") {
+      return document.querySelector(target);
+    }
+
+    if (target.nodeType === 1) {
+      return target;
+    }
+
+    return null;
+  }
+
+  function setToastContent(toast, options) {
+    const body = document.createElement("div");
+    body.className = "toast-body";
+
+    if (options.title) {
+      const title = document.createElement("strong");
+      title.className = "toast-title";
+      title.textContent = options.title;
+      body.append(title);
+    }
+
+    if (options.message && options.message.nodeType) {
+      body.append(options.message);
+    } else {
+      const message = document.createElement("span");
+      message.textContent = options.message || "";
+      body.append(message);
+    }
+
+    toast.append(body);
+  }
+
+  function closeToastElement(toast) {
+    if (!toast) {
+      return null;
+    }
+
+    const timer = toastTimers.get(toast);
+
+    if (timer) {
+      window.clearTimeout(timer);
+      toastTimers.delete(toast);
+    }
+
+    toast.dispatchEvent(new CustomEvent("toast:close", { bubbles: true }));
+    toast.remove();
+
+    return toast;
+  }
+
+  function showToast(message, options) {
+    const nextOptions = normalizeToastOptions(message, options);
+    const type = ["info", "success", "warning", "danger", "muted"].includes(
+      nextOptions.type
+    )
+      ? nextOptions.type
+      : "info";
+    const region = nextOptions.container
+      ? resolveToastContainer(nextOptions.container)
+      : getToastRegion(nextOptions.position);
+    const toast = document.createElement("section");
+    const duration =
+      typeof nextOptions.duration === "number" ? nextOptions.duration : 5000;
+
+    if (!region) {
+      return null;
+    }
+
+    toast.className = "toast";
+    toast.dataset.toast = "";
+    toast.setAttribute("role", type === "danger" ? "alert" : "status");
+
+    if (type !== "info") {
+      toast.classList.add("toast-" + type);
+    }
+
+    setToastContent(toast, nextOptions);
+
+    if (nextOptions.dismissible !== false) {
+      const closeButton = document.createElement("button");
+      closeButton.type = "button";
+      closeButton.className = "toast-close";
+      closeButton.setAttribute(
+        "aria-label",
+        nextOptions.closeLabel || "Close notification"
+      );
+      closeButton.textContent = nextOptions.closeText || "Close";
+      closeButton.addEventListener("click", function () {
+        closeToastElement(toast);
+      });
+      toast.append(closeButton);
+    }
+
+    region.append(toast);
+    toast.dispatchEvent(new CustomEvent("toast:show", { bubbles: true }));
+
+    if (duration > 0) {
+      toastTimers.set(
+        toast,
+        window.setTimeout(function () {
+          closeToastElement(toast);
+        }, duration)
+      );
+    }
+
+    return toast;
+  }
+
+  function clearToasts(target) {
+    const rootElement = target
+      ? resolveToastContainer(target)
+      : document;
+    const toasts = rootElement
+      ? Array.from(rootElement.querySelectorAll(".toast, [data-toast]"))
+      : [];
+
+    toasts.forEach(closeToastElement);
+
+    return toasts;
+  }
+
+  legacy.toast = {
+    show(message, options) {
+      return showToast(message, options);
+    },
+    close(target) {
+      return closeToastElement(resolveToast(target));
+    },
+    clear(target) {
+      return clearToasts(target);
     },
   };
 
@@ -1462,6 +1669,25 @@
         }
 
         legacy.modal.open(this);
+      });
+    };
+  }
+
+  if (root.jQuery && !root.jQuery.toast) {
+    root.jQuery.toast = function (message, options) {
+      return legacy.toast.show(message, options);
+    };
+  }
+
+  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.toast) {
+    root.jQuery.fn.toast = function (action) {
+      return this.each(function () {
+        if (action === "close") {
+          legacy.toast.close(this);
+          return;
+        }
+
+        legacy.toast.show(this, action);
       });
     };
   }

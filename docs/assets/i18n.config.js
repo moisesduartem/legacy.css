@@ -22,7 +22,7 @@ window.LegacyCssI18n = {
           "Or import the source entry point from a bundler.",
         "index.js.header": "Add optional JavaScript",
         "index.js.body":
-          "Tabs, modal dialogs, and drag/drop boards use the optional browser script.",
+          "Tabs, modal dialogs, toast notifications, and drag/drop boards use the optional browser script.",
         "index.markup.header": "Write semantic HTML",
         "index.markup.body":
           "Native elements such as forms, tables, buttons, fieldsets, and details receive usable defaults without extra classes.",
@@ -104,7 +104,7 @@ window.LegacyCssI18n = {
           "Ou importe o ponto de entrada dos fontes em um bundler.",
         "index.js.header": "Adicionar JavaScript opcional",
         "index.js.body":
-          "Abas, modais e quadros de arrastar e soltar usam o script opcional para navegadores.",
+          "Abas, modais, notificações toast e quadros de arrastar e soltar usam o script opcional para navegadores.",
         "index.markup.header": "Escrever HTML semântico",
         "index.markup.body":
           "Elementos nativos como formulários, tabelas, botões, fieldsets e details recebem padrões utilizáveis sem classes extras.",

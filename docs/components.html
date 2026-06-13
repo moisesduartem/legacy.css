@@ -65,6 +65,54 @@
       </section>
 
       <section class="panel docs-example">
+        <header>Toast notifications</header>
+        <p>Toast notifications can be created with the optional browser script and dismissed automatically or by the user.</p>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Toast example">
+            <button type="button" role="tab" id="toast-implementation-tab" aria-selected="true" aria-controls="toast-implementation">Implementation</button>
+            <button type="button" role="tab" id="toast-code-tab" aria-selected="false" aria-controls="toast-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="toast-implementation" aria-labelledby="toast-implementation-tab">
+            <p>
+              <button type="button" onclick="LegacyCss.toast.show({ title: 'Saved', message: 'The request was updated.', type: 'success', position: 'top-right' })">Show with LegacyCss.toast.show()</button>
+              <button type="button" onclick="$.toast({ title: 'Queued', message: 'The export will run in the background.', type: 'warning', position: 'bottom-left' })">Show with $.toast()</button>
+            </p>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="toast-code" aria-labelledby="toast-code-tab" hidden>
+            <p>HTML:</p>
+            <pre>&lt;p&gt;
+  &lt;button type="button" onclick="LegacyCss.toast.show({ title: 'Saved', message: 'The request was updated.', type: 'success', position: 'top-right' })"&gt;Show toast&lt;/button&gt;
+&lt;/p&gt;</pre>
+            <p>JavaScript API:</p>
+            <pre>&lt;script&gt;
+  LegacyCss.toast.show({
+    title: "Saved",
+    message: "The request was updated.",
+    type: "success",
+    duration: 5000,
+    position: "top-right"
+  });
+
+  LegacyCss.toast.close(toastElement);
+  LegacyCss.toast.clear();
+&lt;/script&gt;</pre>
+            <p>jQuery API:</p>
+            <pre>&lt;script src="https://code.jquery.com/jquery-3.7.1.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  $.toast({
+    title: "Queued",
+    message: "The export will run in the background.",
+    type: "warning",
+    position: "bottom-left"
+  });
+
+  $(".toast").toast("close");
+&lt;/script&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example">
         <header>Badges and toolbar</header>
         <div class="tabs" data-tabs>
           <div class="tabs-list" role="tablist" aria-label="Badges and toolbar example">

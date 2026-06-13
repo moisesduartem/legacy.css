@@ -25,6 +25,7 @@ const cssModules = [
   "dragdrop.css",
   "progress.css",
   "alerts.css",
+  "toast.css",
   "badges.css",
   "utilities.css",
 ];
@@ -111,6 +112,12 @@ const snippets = {
 <div class="progress progress-loading" role="progressbar" aria-label="Carregando" aria-valuetext="Carregando">
   <span class="progress-bar"></span>
 </div>`,
+  },
+  toast: {
+    title: "Toast notification",
+    html: `<button type="button" onclick="LegacyCss.toast.show({ title: 'Salvo', message: 'Registro atualizado.', type: 'success', position: 'top-right' })">
+  Mostrar notificação
+</button>`,
   },
 };
 

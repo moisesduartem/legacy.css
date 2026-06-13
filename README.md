@@ -45,13 +45,13 @@ Or import the source entry point in a bundler:
 @import "legacy.css/src/legacy.css";
 ```
 
-For interactive components such as tabs, modal dialogs, multiselect controls, and drag/drop boards, include the optional browser script:
+For interactive components such as tabs, modal dialogs, toast notifications, multiselect controls, and drag/drop boards, include the optional browser script:
 
 ```html
 <script src="./node_modules/legacy.css/dist/legacy.min.js" defer></script>
 ```
 
-The script exposes `window.LegacyCss` and has no runtime dependency. If jQuery is already present on the page, it also registers small `modal`, `tabs`, `multiselect`, and `dragdrop` bridges.
+The script exposes `window.LegacyCss` and has no runtime dependency. If jQuery is already present on the page, it also registers small `modal`, `toast`, `tabs`, `multiselect`, and `dragdrop` bridges.
 
 ## CDN
 
@@ -106,6 +106,7 @@ src/
   dragdrop.css
   progress.css
   alerts.css
+  toast.css
   badges.css
   utilities.css
   legacy.js
@@ -114,7 +115,7 @@ docs/
 ```
 
 `src/legacy.css` is the main entry point and imports the other files in order.
-`src/legacy.js` contains the optional browser behavior for tabs, modal dialogs, multiselect controls, drag/drop boards, and pagination.
+`src/legacy.js` contains the optional browser behavior for tabs, modal dialogs, toast notifications, multiselect controls, drag/drop boards, and pagination.
 
 ## Scripts
 
@@ -195,14 +196,14 @@ Keep the HTML semantic, prefer native forms and tables, and include the
 legacy.css stylesheet and optional legacy.min.js script.
 ```
 
-The MCP server helps agents inspect the available CSS modules, find selectors and custom properties, and reuse semantic snippets for forms, tables, panels, alerts, badges, and tabs. For interactive tabs, modals, multiselect controls, drag/drop boards, and pagination, include:
+The MCP server helps agents inspect the available CSS modules, find selectors and custom properties, and reuse semantic snippets for forms, tables, panels, alerts, badges, toasts, and tabs. For interactive tabs, modals, toasts, multiselect controls, drag/drop boards, and pagination, include:
 
 ```html
 <link rel="stylesheet" href="./node_modules/legacy.css/dist/legacy.css">
 <script src="./node_modules/legacy.css/dist/legacy.min.js" defer></script>
 ```
 
-When reviewing generated pages, keep the project philosophy in mind: start with semantic HTML, rely on native elements first, and use classes only for patterns such as `.container`, `.panel`, `.alert`, `.badge`, `.toolbar`, `.tabs`, `.modal`, `.multiselect`, `.dragdrop`, `.pagination`, and `.progress`.
+When reviewing generated pages, keep the project philosophy in mind: start with semantic HTML, rely on native elements first, and use classes only for patterns such as `.container`, `.panel`, `.alert`, `.toast`, `.badge`, `.toolbar`, `.tabs`, `.modal`, `.multiselect`, `.dragdrop`, `.pagination`, and `.progress`.
 
 ## Roadmap
 
