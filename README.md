@@ -125,9 +125,83 @@ pnpm run build:js
 pnpm run build:all
 pnpm run build:docs
 pnpm run watch
+pnpm run mcp
 ```
 
 The CSS build uses Lightning CSS to bundle `src/legacy.css` into `dist/legacy.css` and generate `dist/legacy.min.css`. The JavaScript build keeps a readable `dist/legacy.js` copy and uses Vite to generate `dist/legacy.min.js`.
+
+## MCP Server
+
+This package includes a small stdio MCP server for agents that need project-aware access to `legacy.css` source files, built CSS, design tokens, and semantic HTML examples.
+
+Run it from the repository:
+
+```sh
+pnpm run mcp
+```
+
+Or, after installing the package, use the executable:
+
+```sh
+legacy-css-mcp
+```
+
+The server exposes resources for the README, source CSS entry point, bundled CSS, and every CSS module under `src/`. It also exposes tools to list modules, read a module, inspect design tokens, search CSS source, and return small usage snippets.
+
+### Configure an MCP Client
+
+Point your MCP client at the server command. From a local checkout, use:
+
+```json
+{
+  "mcpServers": {
+    "legacy-css": {
+      "command": "pnpm",
+      "args": ["run", "mcp"],
+      "cwd": "/absolute/path/to/legacy.css"
+    }
+  }
+}
+```
+
+After installing the package globally or inside a project, use the binary instead:
+
+```json
+{
+  "mcpServers": {
+    "legacy-css": {
+      "command": "legacy-css-mcp"
+    }
+  }
+}
+```
+
+Use the first form while developing this repository. Use the binary form when another project wants to consume the published package.
+
+### Build Pages Quickly With MCP
+
+Once the server is connected, ask your agent to use the `legacy-css` MCP server before writing markup. Good prompts are specific about the page type, data fields, and components:
+
+```text
+Use the legacy-css MCP server to build a supplier registration page.
+Include a toolbar, two fieldsets, status badges, a table of recent suppliers,
+and an alert area for validation messages.
+```
+
+```text
+Use legacy-css resources and snippets to scaffold an admin dashboard page.
+Keep the HTML semantic, prefer native forms and tables, and include the
+legacy.css stylesheet and optional legacy.min.js script.
+```
+
+The MCP server helps agents inspect the available CSS modules, find selectors and custom properties, and reuse semantic snippets for forms, tables, panels, alerts, badges, and tabs. For interactive tabs, modals, multiselect controls, drag/drop boards, and pagination, include:
+
+```html
+<link rel="stylesheet" href="./node_modules/legacy.css/dist/legacy.css">
+<script src="./node_modules/legacy.css/dist/legacy.min.js" defer></script>
+```
+
+When reviewing generated pages, keep the project philosophy in mind: start with semantic HTML, rely on native elements first, and use classes only for patterns such as `.container`, `.panel`, `.alert`, `.badge`, `.toolbar`, `.tabs`, `.modal`, `.multiselect`, `.dragdrop`, and `.pagination`.
 
 ## Roadmap
 

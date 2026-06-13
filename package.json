@@ -8,14 +8,19 @@
   "type": "module",
   "main": "dist/legacy.css",
   "style": "dist/legacy.css",
+  "bin": {
+    "legacy-css-mcp": "./mcp/server.js"
+  },
   "files": [
     "dist",
+    "mcp",
     "src",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "lint": "stylelint \"src/**/*.css\"",
+    "mcp": "node mcp/server.js",
     "build": "lightningcss --bundle src/legacy.css -o dist/legacy.css",
     "build:min": "lightningcss --bundle --minify src/legacy.css -o dist/legacy.min.css",
     "build:js": "mkdir -p dist && cp src/legacy.js dist/legacy.js && vite build",

@@ -63,6 +63,41 @@ pnpm add legacy.css</pre>
 &lt;/main&gt;</pre>
       </section>
 
+      <section class="panel">
+        <header>Use the MCP server</header>
+        <p>legacy.css includes a stdio MCP server so coding agents can inspect the library and quickly scaffold administrative pages with the right semantic elements and component classes.</p>
+
+        <p>Run the server from this repository:</p>
+        <pre>pnpm run mcp</pre>
+
+        <p>Configure an MCP client with a local checkout:</p>
+        <pre>{
+  "mcpServers": {
+    "legacy-css": {
+      "command": "pnpm",
+      "args": ["run", "mcp"],
+      "cwd": "/absolute/path/to/legacy.css"
+    }
+  }
+}</pre>
+
+        <p>After package installation, configure the executable directly:</p>
+        <pre>{
+  "mcpServers": {
+    "legacy-css": {
+      "command": "legacy-css-mcp"
+    }
+  }
+}</pre>
+
+        <p>Ask your agent to use the MCP server before writing markup:</p>
+        <pre>Use the legacy-css MCP server to build a supplier registration page.
+Include a toolbar, two fieldsets, status badges, a table of recent suppliers,
+and an alert area for validation messages.</pre>
+
+        <p>The server exposes resources for the README, source CSS entry point, built CSS, and every CSS module. It also provides tools to list modules, read a module, inspect design tokens, search selectors or properties, and return semantic HTML snippets for common page patterns.</p>
+      </section>
+
       <p><a href="components.html" data-i18n="index.components.link">View component examples</a></p>
     </main>
   </body>
