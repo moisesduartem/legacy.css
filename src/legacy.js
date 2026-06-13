@@ -8,13 +8,17 @@
   const wiredTabs = new WeakSet();
   const wiredDragdropBoards = new WeakSet();
   const wiredMultiselects = new WeakSet();
+  const wiredPaginations = new WeakSet();
   const multiselectMap = new WeakMap();
   const dragdropOptions = new WeakMap();
+  const paginationOptions = new WeakMap();
+  const paginationState = new WeakMap();
   const supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
   const dragdropBoardSelector = "[data-dragdrop], .dragdrop";
   const dragdropColumnSelector = "[data-dragdrop-column], .dragdrop-column";
   const dragdropItemSelector = "[data-dragdrop-item], .dragdrop-item";
   const multiselectSelector = 'select[multiple][data-multiselect], select[multiple].multiselect-source';
+  const paginationSelector = "[data-pagination], .pagination";
 
   let scrollLockCount = 0;
   let previousBodyOverflow = "";
@@ -1011,12 +1015,433 @@
     },
   };
 
+  function resolvePagination(target) {
+    if (!target) {
+      return null;
+    }
+
+    if (target.jquery) {
+      return resolvePagination(target[0]);
+    }
+
+    if (typeof target === "string") {
+      return document.querySelector(target);
+    }
+
+    if (target.nodeType === 1) {
+      if (target.matches(paginationSelector)) {
+        return target;
+      }
+
+      return target.closest(paginationSelector);
+    }
+
+    return null;
+  }
+
+  function getPaginationNumber(value, fallback) {
+    const number = Number(value);
+
+    return Number.isFinite(number) && number > 0 ? number : fallback;
+  }
+
+  function getPaginationPageSizes(rootElement, options) {
+    const configured =
+      options.pageSizes ||
+      rootElement.getAttribute("data-page-sizes") ||
+      rootElement.getAttribute("data-page-size-options");
+    const values = Array.isArray(configured)
+      ? configured
+      : String(configured || "10,25,50").split(",");
+    const sizes = values
+      .map((value) => getPaginationNumber(value, 0))
+      .filter((value, index, list) => value > 0 && list.indexOf(value) === index);
+
+    return sizes.length > 0 ? sizes : [10, 25, 50];
+  }
+
+  function getPaginationTarget(rootElement, options) {
+    if (options.target) {
+      return typeof options.target === "string"
+        ? document.querySelector(options.target)
+        : options.target;
+    }
+
+    const selector = rootElement.getAttribute("data-target");
+
+    return selector ? document.querySelector(selector) : null;
+  }
+
+  function createPaginationResult(rootElement, options, state) {
+    if (typeof options.load === "function") {
+      return options.load.call(rootElement, {
+        page: state.page,
+        pageSize: state.pageSize,
+        offset: (state.page - 1) * state.pageSize,
+      });
+    }
+
+    const data = Array.isArray(options.data) ? options.data : [];
+    const start = (state.page - 1) * state.pageSize;
+
+    return {
+      items: data.slice(start, start + state.pageSize),
+      total: data.length,
+    };
+  }
+
+  function normalizePaginationResult(result, state) {
+    const payload = Array.isArray(result) ? { items: result, total: result.length } : result || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const total = getPaginationNumber(payload.total, items.length);
+    const pageCount = Math.max(1, Math.ceil(total / state.pageSize));
+
+    return {
+      items,
+      page: getPaginationNumber(payload.page, state.page),
+      pageCount,
+      pageSize: getPaginationNumber(payload.pageSize, state.pageSize),
+      total,
+    };
+  }
+
+  function renderPaginationItem(item, index, options, state) {
+    if (typeof options.renderItem === "function") {
+      return options.renderItem(item, index, state);
+    }
+
+    const row = document.createElement("tr");
+    const values = item && typeof item === "object" ? Object.values(item) : [item];
+
+    values.forEach((value) => {
+      const cell = document.createElement("td");
+
+      cell.textContent = value == null ? "" : String(value);
+      row.append(cell);
+    });
+
+    return row;
+  }
+
+  function renderPaginationItems(rootElement, result) {
+    const options = paginationOptions.get(rootElement) || {};
+    const target = options.target;
+
+    if (!target) {
+      return;
+    }
+
+    target.replaceChildren();
+    result.items.forEach((item, index) => {
+      const rendered = renderPaginationItem(item, index, options, result);
+
+      if (typeof rendered === "string") {
+        target.insertAdjacentHTML("beforeend", rendered);
+      } else if (rendered) {
+        target.append(rendered);
+      }
+    });
+  }
+
+  function getPaginationPages(currentPage, pageCount, maxPages) {
+    const pages = [];
+
+    if (pageCount <= maxPages) {
+      for (let page = 1; page <= pageCount; page += 1) {
+        pages.push(page);
+      }
+
+      return pages;
+    }
+
+    pages.push(1);
+
+    const sideCount = Math.max(1, Math.floor((maxPages - 3) / 2));
+    const start = Math.max(2, currentPage - sideCount);
+    const end = Math.min(pageCount - 1, currentPage + sideCount);
+
+    if (start > 2) {
+      pages.push("ellipsis-start");
+    }
+
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
+    }
+
+    if (end < pageCount - 1) {
+      pages.push("ellipsis-end");
+    }
+
+    pages.push(pageCount);
+
+    return pages;
+  }
+
+  function createPaginationButton(label, action, disabled) {
+    const button = document.createElement("button");
+
+    button.type = "button";
+    button.setAttribute("data-pagination-action", action);
+    button.textContent = label;
+    button.disabled = disabled;
+
+    return button;
+  }
+
+  function renderPaginationControls(rootElement, result) {
+    const options = paginationOptions.get(rootElement) || {};
+    const pageCount = result.pageCount;
+    const page = Math.min(result.page, pageCount);
+    const maxPages = getPaginationNumber(options.maxPages, 7);
+    const summary = document.createElement("span");
+    const pages = document.createElement("span");
+    const size = document.createElement("span");
+    const label = document.createElement("label");
+    const select = document.createElement("select");
+
+    summary.className = "pagination-summary";
+    summary.textContent = "Page " + page + " of " + pageCount + " (" + result.total + " items)";
+    pages.className = "pagination-pages";
+    pages.setAttribute("role", "group");
+    pages.setAttribute("aria-label", "Pages");
+    pages.append(createPaginationButton("Previous", "previous", page <= 1));
+
+    getPaginationPages(page, pageCount, maxPages).forEach((pageNumber) => {
+      if (typeof pageNumber !== "number") {
+        const ellipsis = document.createElement("span");
+
+        ellipsis.className = "pagination-ellipsis";
+        ellipsis.setAttribute("aria-hidden", "true");
+        ellipsis.textContent = "...";
+        pages.append(ellipsis);
+        return;
+      }
+
+      const button = createPaginationButton(String(pageNumber), "page", false);
+
+      button.className = "pagination-page";
+      button.setAttribute("data-pagination-page", String(pageNumber));
+      button.setAttribute("aria-label", "Page " + pageNumber);
+
+      if (pageNumber === page) {
+        button.setAttribute("aria-current", "page");
+      }
+
+      pages.append(button);
+    });
+
+    pages.append(createPaginationButton("Next", "next", page >= pageCount));
+    size.className = "pagination-size";
+    label.textContent = "Page size";
+
+    options.pageSizes.forEach((pageSize) => {
+      const option = document.createElement("option");
+
+      option.value = String(pageSize);
+      option.textContent = String(pageSize);
+      option.selected = pageSize === result.pageSize;
+      select.append(option);
+    });
+
+    select.setAttribute("data-pagination-size", "");
+    label.append(select);
+    size.append(label);
+    rootElement.replaceChildren(summary, pages, size);
+  }
+
+  function setPaginationLoading(rootElement, loading) {
+    rootElement.setAttribute("aria-busy", loading ? "true" : "false");
+    rootElement.querySelectorAll("button, select").forEach((control) => {
+      control.disabled = loading;
+    });
+  }
+
+  function handlePaginationError(rootElement, state, request, error) {
+    if (request !== state.request) {
+      return;
+    }
+
+    if (state.result) {
+      renderPaginationControls(rootElement, state.result);
+    } else {
+      setPaginationLoading(rootElement, false);
+    }
+
+    rootElement.dispatchEvent(
+      new CustomEvent("pagination:error", {
+        bubbles: true,
+        detail: { error },
+      })
+    );
+  }
+
+  function updatePagination(rootElement) {
+    const options = rootElement ? paginationOptions.get(rootElement) : null;
+    const state = rootElement ? paginationState.get(rootElement) : null;
+
+    if (!options || !state) {
+      return rootElement;
+    }
+
+    state.request += 1;
+    const request = state.request;
+
+    setPaginationLoading(rootElement, true);
+
+    try {
+      Promise.resolve(createPaginationResult(rootElement, options, state))
+        .then((rawResult) => {
+          if (request !== state.request) {
+            return;
+          }
+
+          const result = normalizePaginationResult(rawResult, state);
+
+          state.page = Math.min(result.page, result.pageCount);
+          state.pageSize = result.pageSize;
+          state.result = result;
+          renderPaginationItems(rootElement, result);
+          renderPaginationControls(rootElement, result);
+          rootElement.dispatchEvent(
+            new CustomEvent("pagination:change", {
+              bubbles: true,
+              detail: result,
+            })
+          );
+        })
+        .catch((error) => {
+          handlePaginationError(rootElement, state, request, error);
+        });
+    } catch (error) {
+      handlePaginationError(rootElement, state, request, error);
+    }
+
+    return rootElement;
+  }
+
+  function setPaginationPage(rootElement, page) {
+    const state = rootElement ? paginationState.get(rootElement) : null;
+
+    if (!state) {
+      return null;
+    }
+
+    state.page = getPaginationNumber(page, state.page);
+
+    return updatePagination(rootElement);
+  }
+
+  function setPaginationPageSize(rootElement, pageSize) {
+    const state = rootElement ? paginationState.get(rootElement) : null;
+
+    if (!state) {
+      return null;
+    }
+
+    state.page = 1;
+    state.pageSize = getPaginationNumber(pageSize, state.pageSize);
+
+    return updatePagination(rootElement);
+  }
+
+  function handlePaginationClick(event) {
+    const rootElement = resolvePagination(event.currentTarget);
+    const button = event.target.closest("[data-pagination-action]");
+    const state = rootElement ? paginationState.get(rootElement) : null;
+
+    if (!button || !state || button.disabled) {
+      return;
+    }
+
+    const action = button.getAttribute("data-pagination-action");
+
+    if (action === "previous") {
+      setPaginationPage(rootElement, state.page - 1);
+    } else if (action === "next") {
+      setPaginationPage(rootElement, state.page + 1);
+    } else if (action === "page") {
+      setPaginationPage(rootElement, button.getAttribute("data-pagination-page"));
+    }
+  }
+
+  function handlePaginationChange(event) {
+    if (event.target.matches("[data-pagination-size]")) {
+      setPaginationPageSize(event.currentTarget, event.target.value);
+    }
+  }
+
+  function setupPagination(target, options) {
+    const rootElement = resolvePagination(target);
+
+    if (!rootElement) {
+      return null;
+    }
+
+    const nextOptions = Object.assign({}, paginationOptions.get(rootElement), options || {});
+
+    nextOptions.target = getPaginationTarget(rootElement, nextOptions);
+    nextOptions.pageSizes = getPaginationPageSizes(rootElement, nextOptions);
+    nextOptions.pageSize = getPaginationNumber(
+      nextOptions.pageSize || rootElement.getAttribute("data-page-size"),
+      nextOptions.pageSizes[0]
+    );
+    nextOptions.maxPages = getPaginationNumber(
+      nextOptions.maxPages || rootElement.getAttribute("data-max-pages"),
+      7
+    );
+
+    paginationOptions.set(rootElement, nextOptions);
+
+    if (paginationState.has(rootElement)) {
+      const state = paginationState.get(rootElement);
+
+      if (options && options.pageSize) {
+        state.page = 1;
+        state.pageSize = nextOptions.pageSize;
+      }
+    } else {
+      paginationState.set(rootElement, {
+        page: getPaginationNumber(rootElement.getAttribute("data-page"), 1),
+        pageSize: nextOptions.pageSize,
+        request: 0,
+      });
+    }
+
+    if (!wiredPaginations.has(rootElement)) {
+      wiredPaginations.add(rootElement);
+      rootElement.addEventListener("click", handlePaginationClick);
+      rootElement.addEventListener("change", handlePaginationChange);
+    }
+
+    updatePagination(rootElement);
+
+    return rootElement;
+  }
+
+  legacy.pagination = {
+    setup(target, options) {
+      return setupPagination(target, options);
+    },
+    goTo(target, page) {
+      return setPaginationPage(resolvePagination(target), page);
+    },
+    pageSize(target, pageSize) {
+      return setPaginationPageSize(resolvePagination(target), pageSize);
+    },
+    refresh(target) {
+      return updatePagination(resolvePagination(target));
+    },
+  };
+
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-tabs], .tabs").forEach(setupTabs);
     document.querySelectorAll(dragdropBoardSelector).forEach((board) => {
       setupDragdrop(board);
     });
     document.querySelectorAll(multiselectSelector).forEach(setupMultiselect);
+    document.querySelectorAll("[data-pagination]").forEach((rootElement) => {
+      setupPagination(rootElement);
+    });
   });
 
   document.addEventListener("click", handleDocumentMultiselectClick);
@@ -1081,6 +1506,29 @@
         }
 
         legacy.multiselect.setup(this);
+      });
+    };
+  }
+
+  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.pagination) {
+    root.jQuery.fn.pagination = function (action, value) {
+      return this.each(function () {
+        if (action === "goTo") {
+          legacy.pagination.goTo(this, value);
+          return;
+        }
+
+        if (action === "pageSize") {
+          legacy.pagination.pageSize(this, value);
+          return;
+        }
+
+        if (action === "refresh") {
+          legacy.pagination.refresh(this);
+          return;
+        }
+
+        legacy.pagination.setup(this, action);
       });
     };
   }

@@ -99,6 +99,7 @@ src/
   tables.css
   lists.css
   navigation.css
+  pagination.css
   panels.css
   modal.css
   tabs.css
@@ -112,7 +113,7 @@ docs/
 ```
 
 `src/legacy.css` is the main entry point and imports the other files in order.
-`src/legacy.js` contains the optional browser behavior for tabs, modal dialogs, multiselect controls, and drag/drop boards.
+`src/legacy.js` contains the optional browser behavior for tabs, modal dialogs, multiselect controls, drag/drop boards, and pagination.
 
 ## Scripts
 

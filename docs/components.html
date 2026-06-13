@@ -367,6 +367,98 @@
       </section>
 
       <section class="panel docs-example">
+        <header>Pagination</header>
+        <p>Use <code>LegacyCss.pagination.setup()</code> to load paged records into a target element. The example uses a local array, but the same callback shape can call a backend.</p>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Pagination example">
+            <button type="button" role="tab" id="pagination-implementation-tab" aria-selected="true" aria-controls="pagination-implementation">Implementation</button>
+            <button type="button" role="tab" id="pagination-code-tab" aria-selected="false" aria-controls="pagination-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="pagination-implementation" aria-labelledby="pagination-implementation-tab">
+            <table>
+              <caption>Paginated requests</caption>
+              <thead>
+                <tr>
+                  <th>Protocol</th>
+                  <th>Requester</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody id="pagination-requests"></tbody>
+            </table>
+            <nav class="pagination" id="request-pagination" aria-label="Request pages"></nav>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="pagination-code" aria-labelledby="pagination-code-tab" hidden>
+            <p>HTML:</p>
+            <pre>&lt;table&gt;
+  &lt;caption&gt;Paginated requests&lt;/caption&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Protocol&lt;/th&gt;
+      &lt;th&gt;Requester&lt;/th&gt;
+      &lt;th&gt;Status&lt;/th&gt;
+      &lt;th&gt;Updated&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody id="pagination-requests"&gt;&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;nav class="pagination" id="request-pagination" aria-label="Request pages"&gt;&lt;/nav&gt;</pre>
+            <p>JavaScript API with local data:</p>
+            <pre>&lt;script&gt;
+  const requests = [
+    { protocol: "2026-00124", requester: "Ana Costa", status: "In review", updated: "06/13/2026" },
+    { protocol: "2026-00125", requester: "Bruno Lima", status: "Pending", updated: "06/12/2026" }
+  ];
+
+  LegacyCss.pagination.setup("#request-pagination", {
+    data: requests,
+    target: "#pagination-requests",
+    pageSize: 5,
+    pageSizes: [5, 10, 25],
+    renderItem(request) {
+      const row = document.createElement("tr");
+
+      row.innerHTML =
+        "&lt;td&gt;" + request.protocol + "&lt;/td&gt;" +
+        "&lt;td&gt;" + request.requester + "&lt;/td&gt;" +
+        "&lt;td&gt;" + request.status + "&lt;/td&gt;" +
+        "&lt;td&gt;" + request.updated + "&lt;/td&gt;";
+
+      return row;
+    }
+  });
+&lt;/script&gt;</pre>
+            <p>Backend-shaped loader:</p>
+            <pre>&lt;script&gt;
+  LegacyCss.pagination.setup("#request-pagination", {
+    target: "#pagination-requests",
+    pageSize: 10,
+    load({ page, pageSize }) {
+      return fetch("/api/requests?page=" + page + "&amp;pageSize=" + pageSize)
+        .then((response) =&gt; response.json());
+    },
+    renderItem(request) {
+      return "&lt;tr&gt;&lt;td&gt;" + request.protocol + "&lt;/td&gt;&lt;/tr&gt;";
+    }
+  });
+&lt;/script&gt;</pre>
+            <p>jQuery API:</p>
+            <pre>&lt;script&gt;
+  $("#request-pagination").pagination({
+    data: requests,
+    target: "#pagination-requests",
+    pageSize: 5
+  });
+  $("#request-pagination").pagination("goTo", 2);
+  $("#request-pagination").pagination("pageSize", 10);
+  $("#request-pagination").pagination("refresh");
+&lt;/script&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example">
         <header>Multiselect</header>
         <p>Use a native <code>&lt;select multiple&gt;</code> with <code>data-multiselect</code> for automatic progressive enhancement.</p>
         <div class="tabs" data-tabs>
@@ -665,6 +757,20 @@
         const status = document.getElementById("dragdrop-status");
         const reviewers = document.getElementById("reviewers");
         const reviewersOutput = document.getElementById("reviewers-output");
+        const requests = [
+          { protocol: "2026-00124", requester: "Ana Costa", status: "In review", updated: "06/13/2026" },
+          { protocol: "2026-00125", requester: "Bruno Lima", status: "Pending", updated: "06/12/2026" },
+          { protocol: "2026-00126", requester: "Carla Mendes", status: "Completed", updated: "06/11/2026" },
+          { protocol: "2026-00127", requester: "Diego Rocha", status: "Blocked", updated: "06/10/2026" },
+          { protocol: "2026-00128", requester: "Elisa Souza", status: "Open", updated: "06/09/2026" },
+          { protocol: "2026-00129", requester: "Felipe Nunes", status: "In review", updated: "06/08/2026" },
+          { protocol: "2026-00130", requester: "Gabriela Alves", status: "Pending", updated: "06/07/2026" },
+          { protocol: "2026-00131", requester: "Helena Castro", status: "Completed", updated: "06/06/2026" },
+          { protocol: "2026-00132", requester: "Igor Martins", status: "Open", updated: "06/05/2026" },
+          { protocol: "2026-00133", requester: "Julia Fernandes", status: "Archived", updated: "06/04/2026" },
+          { protocol: "2026-00134", requester: "Lucas Pereira", status: "Pending", updated: "06/03/2026" },
+          { protocol: "2026-00135", requester: "Marina Gomes", status: "In review", updated: "06/02/2026" },
+        ];
 
         function getSelectedReviewers() {
           return Array.from(reviewers.selectedOptions).map((option) => option.value);
@@ -700,6 +806,19 @@
             ")";
         }
 
+        function renderRequest(request) {
+          const row = document.createElement("tr");
+
+          [request.protocol, request.requester, request.status, request.updated].forEach((value) => {
+            const cell = document.createElement("td");
+
+            cell.textContent = value;
+            row.append(cell);
+          });
+
+          return row;
+        }
+
         reviewers.addEventListener("change", renderSelectedReviewers);
         document.getElementById("reviewers-default").addEventListener("click", function () {
           setSelectedReviewers(["ana", "carla"]);
@@ -708,6 +827,14 @@
           setSelectedReviewers([]);
         });
         renderSelectedReviewers();
+
+        LegacyCss.pagination.setup("#request-pagination", {
+          data: requests,
+          target: "#pagination-requests",
+          pageSize: 5,
+          pageSizes: [5, 10, 25],
+          renderItem: renderRequest,
+        });
 
         LegacyCss.dragdrop.setup("#request-board", {
           onDrag(data) {
