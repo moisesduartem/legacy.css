@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>legacy.css - examples</title>
+    <title>legacy.css - getting started</title>
     <link rel="stylesheet" href="assets/legacy.css">
     <link rel="stylesheet" href="assets/docs.css">
     <script src="assets/i18n.config.js" defer></script>
@@ -16,38 +16,48 @@
         <select id="language-select" data-language-select data-i18n-aria-label="common.language"></select>
       </div>
 
-      <nav aria-label="Examples" data-i18n-aria-label="common.navLabel">
+      <nav aria-label="Documentation" data-i18n-aria-label="common.navLabel">
         <a href="index.html" data-i18n="common.nav.home">Home</a>
-        <a href="forms.html" data-i18n="common.nav.forms">Forms</a>
-        <a href="tables.html" data-i18n="common.nav.tables">Tables</a>
         <a href="components.html" data-i18n="common.nav.components">Components</a>
       </nav>
 
-      <p data-i18n="index.intro">Classless stylesheet for administrative and corporate interfaces.</p>
+      <p data-i18n="index.intro">Start with semantic HTML and let legacy.css provide the administrative interface defaults.</p>
 
       <section class="panel">
-        <header data-i18n="index.panel.header">Basic elements</header>
-        <p data-i18n="index.panel.body">Links, lists, buttons, tables, and forms are styled without classes.</p>
-        <p><a href="forms.html" data-i18n="index.panel.link">Open form example</a></p>
+        <header data-i18n="index.install.header">Install</header>
+        <p data-i18n="index.install.body">Add the package with your preferred package manager.</p>
+        <pre>npm install legacy.css
+pnpm add legacy.css</pre>
       </section>
 
-      <h2 data-i18n="index.lists.heading">Lists</h2>
-      <ul>
-        <li data-i18n="index.unordered.item1">Administrative processes</li>
-        <li data-i18n="index.unordered.item2">Internal records</li>
-        <li data-i18n="index.unordered.item3">Operational reports</li>
-      </ul>
+      <section class="panel">
+        <header data-i18n="index.css.header">Use the CSS</header>
+        <p data-i18n="index.css.body">Reference the built stylesheet from your HTML.</p>
+        <pre>&lt;link rel="stylesheet" href="./node_modules/legacy.css/dist/legacy.css"&gt;</pre>
+        <p data-i18n="index.css.bundler">Or import the source entry point from a bundler.</p>
+        <pre>@import "legacy.css/src/legacy.css";</pre>
+      </section>
 
-      <ol>
-        <li data-i18n="index.ordered.item1">Fill in data</li>
-        <li data-i18n="index.ordered.item2">Review information</li>
-        <li data-i18n="index.ordered.item3">Submit request</li>
-      </ol>
+      <section class="panel">
+        <header data-i18n="index.markup.header">Write semantic HTML</header>
+        <p data-i18n="index.markup.body">Native elements such as forms, tables, buttons, fieldsets, and details receive usable defaults without extra classes.</p>
+        <pre>&lt;main&gt;
+  &lt;h1&gt;Supplier registration&lt;/h1&gt;
 
-      <p>
-        <button type="button" data-i18n="index.button.confirm">Confirm</button>
-        <button type="button" data-i18n="index.button.cancel">Cancel</button>
-      </p>
+  &lt;form&gt;
+    &lt;fieldset&gt;
+      &lt;legend&gt;Registration data&lt;/legend&gt;
+
+      &lt;label for="name"&gt;Name&lt;/label&gt;
+      &lt;input id="name" name="name" type="text"&gt;
+    &lt;/fieldset&gt;
+
+    &lt;button type="submit"&gt;Save&lt;/button&gt;
+  &lt;/form&gt;
+&lt;/main&gt;</pre>
+      </section>
+
+      <p><a href="components.html" data-i18n="index.components.link">View component examples</a></p>
     </main>
   </body>
 </html>

@@ -23,7 +23,7 @@
   margin-top: 0;
 }
 
-.docs-example pre {
+main pre {
   background: #f7f7f7;
   border: 1px solid var(--legacy-border);
   margin: 0;

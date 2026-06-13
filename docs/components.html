@@ -18,10 +18,8 @@
         <select id="language-select" data-language-select data-i18n-aria-label="common.language"></select>
       </div>
 
-      <nav aria-label="Examples" data-i18n-aria-label="common.navLabel">
+      <nav aria-label="Documentation" data-i18n-aria-label="common.navLabel">
         <a href="index.html" data-i18n="common.nav.home">Home</a>
-        <a href="forms.html" data-i18n="common.nav.forms">Forms</a>
-        <a href="tables.html" data-i18n="common.nav.tables">Tables</a>
         <a href="components.html" data-i18n="common.nav.components">Components</a>
       </nav>
 
@@ -92,6 +90,182 @@
     &lt;p&gt;Additional content displayed on demand.&lt;/p&gt;
   &lt;/details&gt;
 &lt;/section&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example" id="forms">
+        <header>Forms</header>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Form example">
+            <button type="button" role="tab" id="forms-implementation-tab" aria-selected="true" aria-controls="forms-implementation">Implementation</button>
+            <button type="button" role="tab" id="forms-code-tab" aria-selected="false" aria-controls="forms-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="forms-implementation" aria-labelledby="forms-implementation-tab">
+            <form>
+              <fieldset>
+                <legend data-i18n="forms.fieldset.registration">Registration data</legend>
+
+                <label for="name" data-i18n="forms.name">Full name</label>
+                <input id="name" name="name" type="text" placeholder="Maria Silva">
+
+                <label for="email" data-i18n="forms.email">Email</label>
+                <input id="email" name="email" type="email" placeholder="maria@example.com">
+
+                <label for="department" data-i18n="forms.department">Department</label>
+                <select id="department" name="department">
+                  <option data-i18n="forms.department.finance">Finance</option>
+                  <option data-i18n="forms.department.hr">Human resources</option>
+                  <option data-i18n="forms.department.operations">Operations</option>
+                </select>
+              </fieldset>
+
+              <fieldset>
+                <legend data-i18n="forms.fieldset.preferences">Preferences</legend>
+
+                <label>
+                  <input name="newsletter" type="checkbox">
+                  <span data-i18n="forms.newsletter">Receive internal announcements</span>
+                </label>
+
+                <label>
+                  <input name="profile" type="radio" value="user">
+                  <span data-i18n="forms.profile.user">User</span>
+                </label>
+
+                <label>
+                  <input name="profile" type="radio" value="manager">
+                  <span data-i18n="forms.profile.manager">Manager</span>
+                </label>
+
+                <label for="notes" data-i18n="forms.notes">Notes</label>
+                <textarea id="notes" name="notes"></textarea>
+              </fieldset>
+
+              <button type="submit" data-i18n="forms.button.save">Save</button>
+              <button type="reset" data-i18n="forms.button.clear">Clear</button>
+            </form>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="forms-code" aria-labelledby="forms-code-tab" hidden>
+            <pre>&lt;form&gt;
+  &lt;fieldset&gt;
+    &lt;legend&gt;Registration data&lt;/legend&gt;
+
+    &lt;label for="name"&gt;Full name&lt;/label&gt;
+    &lt;input id="name" name="name" type="text" placeholder="Maria Silva"&gt;
+
+    &lt;label for="email"&gt;Email&lt;/label&gt;
+    &lt;input id="email" name="email" type="email" placeholder="maria@example.com"&gt;
+
+    &lt;label for="department"&gt;Department&lt;/label&gt;
+    &lt;select id="department" name="department"&gt;
+      &lt;option&gt;Finance&lt;/option&gt;
+      &lt;option&gt;Human resources&lt;/option&gt;
+      &lt;option&gt;Operations&lt;/option&gt;
+    &lt;/select&gt;
+  &lt;/fieldset&gt;
+
+  &lt;fieldset&gt;
+    &lt;legend&gt;Preferences&lt;/legend&gt;
+
+    &lt;label&gt;
+      &lt;input name="newsletter" type="checkbox"&gt;
+      &lt;span&gt;Receive internal announcements&lt;/span&gt;
+    &lt;/label&gt;
+
+    &lt;label&gt;
+      &lt;input name="profile" type="radio" value="user"&gt;
+      &lt;span&gt;User&lt;/span&gt;
+    &lt;/label&gt;
+
+    &lt;label&gt;
+      &lt;input name="profile" type="radio" value="manager"&gt;
+      &lt;span&gt;Manager&lt;/span&gt;
+    &lt;/label&gt;
+
+    &lt;label for="notes"&gt;Notes&lt;/label&gt;
+    &lt;textarea id="notes" name="notes"&gt;&lt;/textarea&gt;
+  &lt;/fieldset&gt;
+
+  &lt;button type="submit"&gt;Save&lt;/button&gt;
+  &lt;button type="reset"&gt;Clear&lt;/button&gt;
+&lt;/form&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel docs-example" id="tables">
+        <header>Tables</header>
+        <div class="tabs" data-tabs>
+          <div class="tabs-list" role="tablist" aria-label="Table example">
+            <button type="button" role="tab" id="tables-implementation-tab" aria-selected="true" aria-controls="tables-implementation">Implementation</button>
+            <button type="button" role="tab" id="tables-code-tab" aria-selected="false" aria-controls="tables-code">Code</button>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="tables-implementation" aria-labelledby="tables-implementation-tab">
+            <table>
+              <caption data-i18n="tables.caption">Recent requests</caption>
+              <thead>
+                <tr>
+                  <th data-i18n="tables.header.protocol">Protocol</th>
+                  <th data-i18n="tables.header.requester">Requester</th>
+                  <th data-i18n="tables.header.status">Status</th>
+                  <th data-i18n="tables.header.updated">Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>2026-00124</td>
+                  <td>Ana Costa</td>
+                  <td data-i18n="tables.status.review">In review</td>
+                  <td data-i18n="tables.date.2026-06-13">06/13/2026</td>
+                </tr>
+                <tr>
+                  <td>2026-00125</td>
+                  <td>Bruno Lima</td>
+                  <td data-i18n="tables.status.pending">Pending</td>
+                  <td data-i18n="tables.date.2026-06-12">06/12/2026</td>
+                </tr>
+                <tr>
+                  <td>2026-00126</td>
+                  <td>Carla Mendes</td>
+                  <td data-i18n="tables.status.done">Completed</td>
+                  <td data-i18n="tables.date.2026-06-11">06/11/2026</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="tables-code" aria-labelledby="tables-code-tab" hidden>
+            <pre>&lt;table&gt;
+  &lt;caption&gt;Recent requests&lt;/caption&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Protocol&lt;/th&gt;
+      &lt;th&gt;Requester&lt;/th&gt;
+      &lt;th&gt;Status&lt;/th&gt;
+      &lt;th&gt;Updated&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2026-00124&lt;/td&gt;
+      &lt;td&gt;Ana Costa&lt;/td&gt;
+      &lt;td&gt;In review&lt;/td&gt;
+      &lt;td&gt;06/13/2026&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2026-00125&lt;/td&gt;
+      &lt;td&gt;Bruno Lima&lt;/td&gt;
+      &lt;td&gt;Pending&lt;/td&gt;
+      &lt;td&gt;06/12/2026&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2026-00126&lt;/td&gt;
+      &lt;td&gt;Carla Mendes&lt;/td&gt;
+      &lt;td&gt;Completed&lt;/td&gt;
+      &lt;td&gt;06/11/2026&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;</pre>
           </div>
         </div>
       </section>
