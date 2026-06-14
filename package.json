@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "A classless CSS framework inspired by classic corporate administrative systems.",
   "license": "MIT",
-  "author": "moises",
+  "author": "Moises Duarte",
   "packageManager": "pnpm@10.12.1",
   "type": "module",
   "main": "dist/legacy.css",
