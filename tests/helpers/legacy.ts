@@ -2,6 +2,10 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { JSDOM } from "jsdom";
 
+interface LegacyDomOptions {
+  beforeEval?: (window: any) => void;
+}
+
 const legacyPath = resolve("src/legacy.ts");
 const legacyUrl = pathToFileURL(legacyPath).href;
 let importId = 0;
@@ -18,7 +22,7 @@ const globalNames = [
   "KeyboardEvent",
 ];
 
-export async function createLegacyDom(html = "", options = {}) {
+export async function createLegacyDom(html = "", options: LegacyDomOptions = {}) {
   const dom = new JSDOM("<!doctype html><html><body>" + html + "</body></html>", {
     pretendToBeVisual: true,
     url: "http://localhost/",
@@ -29,7 +33,7 @@ export async function createLegacyDom(html = "", options = {}) {
   }
 
   if (!dom.window.CSS.escape) {
-    dom.window.CSS.escape = (value) => String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+    dom.window.CSS.escape = (value: unknown) => String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
   }
 
   if (options.beforeEval) {
@@ -37,20 +41,21 @@ export async function createLegacyDom(html = "", options = {}) {
   }
 
   const previousGlobals = new Map();
+  const globalScope = globalThis as Record<string, unknown>;
 
   globalNames.forEach((name) => {
-    previousGlobals.set(name, globalThis[name]);
-    globalThis[name] = dom.window[name];
+    previousGlobals.set(name, globalScope[name]);
+    globalScope[name] = dom.window[name];
   });
 
   dom.__legacyRestoreGlobals = () => {
-    previousGlobals.forEach((value, name) => {
+    previousGlobals.forEach((value: unknown, name: string) => {
       if (value === undefined) {
-        delete globalThis[name];
+        delete globalScope[name];
         return;
       }
 
-      globalThis[name] = value;
+      globalScope[name] = value;
     });
   };
 
@@ -59,7 +64,7 @@ export async function createLegacyDom(html = "", options = {}) {
   return dom;
 }
 
-export function closeDom(dom) {
+export function closeDom(dom: JSDOM): void {
   if (dom.__legacyRestoreGlobals) {
     dom.__legacyRestoreGlobals();
   }
@@ -67,7 +72,7 @@ export function closeDom(dom) {
   dom.window.close();
 }
 
-export function nextFrame(window) {
+export function nextFrame(window: { setTimeout(callback: () => void, delay: number): void }): Promise<void> {
   return new Promise((resolvePromise) => {
     window.setTimeout(resolvePromise, 0);
   });

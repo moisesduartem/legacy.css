@@ -1,638 +1,33 @@
 (function() {
-	//#region src/legacy.ts
-	var legacyToastPositions = [
-		"top-left",
-		"top-right",
-		"bottom-left",
-		"bottom-right"
-	];
-	var legacyPopoverPlacements = [
-		"top",
-		"right",
-		"bottom",
-		"left"
-	];
-	var legacyThemes = ["light", "dark"];
-	var legacyThemeStorageKey = "legacy.css.theme";
-	(function() {
-		const root = window;
-		/* v8 ignore next -- alternate startup path is preserving an existing namespace */
-		if (!root.LegacyCss) root.LegacyCss = {};
-		const legacy = root.LegacyCss;
-		const openDialogs = [];
-		const openerMap = /* @__PURE__ */ new WeakMap();
-		const fallbackDialogs = /* @__PURE__ */ new WeakSet();
-		const wiredDialogs = /* @__PURE__ */ new WeakSet();
-		const wiredTabs = /* @__PURE__ */ new WeakSet();
-		const wiredPopoverTriggers = /* @__PURE__ */ new WeakSet();
-		const wiredDragdropBoards = /* @__PURE__ */ new WeakSet();
-		const wiredMultiselects = /* @__PURE__ */ new WeakSet();
-		const wiredPaginations = /* @__PURE__ */ new WeakSet();
-		const multiselectMap = /* @__PURE__ */ new WeakMap();
-		const dragdropOptions = /* @__PURE__ */ new WeakMap();
-		const paginationOptions = /* @__PURE__ */ new WeakMap();
-		const paginationState = /* @__PURE__ */ new WeakMap();
-		const toastTimers = /* @__PURE__ */ new WeakMap();
-		const supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
-		const dragdropBoardSelector = "[data-dragdrop], .dragdrop";
-		const dragdropColumnSelector = "[data-dragdrop-column], .dragdrop-column";
-		const dragdropItemSelector = "[data-dragdrop-item], .dragdrop-item";
-		const multiselectSelector = "select[multiple][data-multiselect], select[multiple].multiselect-source";
-		const paginationSelector = "[data-pagination], .pagination";
-		const popoverTriggerSelector = "[data-popover-target], [data-popover]";
-		let scrollLockCount = 0;
-		let previousBodyOverflow = "";
-		let previousHtmlOverflow = "";
-		let dragdropState = null;
-		let multiselectId = 0;
-		let openPopoverTrigger = null;
-		const focusableSelector = [
-			"a[href]",
-			"button:not([disabled])",
-			"input:not([disabled])",
-			"select:not([disabled])",
-			"textarea:not([disabled])",
-			"[tabindex]:not([tabindex=\"-1\"])"
-		].join(", ");
-		function isLegacyCollection(target) {
-			return typeof target === "object" && target !== null && "jquery" in target;
-		}
-		function isElement(target) {
-			return typeof target === "object" && target !== null && "nodeType" in target && target.nodeType === 1;
-		}
-		function isSelectElement(target) {
-			return isElement(target) && target.nodeName === "SELECT";
-		}
-		function eventTargetElement(event) {
-			return isElement(event.target) ? event.target : null;
-		}
-		function currentTargetElement(event) {
-			/* v8 ignore next -- browser component listeners always dispatch from elements */
-			return isElement(event.currentTarget) ? event.currentTarget : null;
-		}
-		function listen(target, type, listener) {
-			target.addEventListener(type, listener);
-		}
-		function isToastPosition(position) {
-			return typeof position === "string" && legacyToastPositions.includes(position);
-		}
-		function isPopoverPlacement(placement) {
-			return typeof placement === "string" && legacyPopoverPlacements.includes(placement);
-		}
-		function isLegacyTheme(theme) {
-			return typeof theme === "string" && legacyThemes.includes(theme);
-		}
-		function normalizeTheme(theme) {
-			return isLegacyTheme(theme) ? theme : "light";
-		}
-		function getStoredTheme() {
-			try {
-				return window.localStorage.getItem(legacyThemeStorageKey);
-			} catch (error) {
-				return null;
-			}
-		}
-		function storeTheme(theme) {
-			try {
-				window.localStorage.setItem(legacyThemeStorageKey, theme);
-			} catch (error) {
-				return;
-			}
-		}
-		function applyTheme(theme, persist = true) {
-			const nextTheme = normalizeTheme(theme);
-			document.documentElement.dataset.legacyTheme = nextTheme;
-			if (persist) storeTheme(nextTheme);
-			return nextTheme;
-		}
-		legacy.theme = {
-			apply(theme) {
-				return applyTheme(theme || getStoredTheme());
-			},
-			get() {
-				return normalizeTheme(document.documentElement.dataset.legacyTheme || getStoredTheme());
-			},
-			set(theme) {
-				return applyTheme(theme);
-			}
-		};
-		if (isLegacyTheme(getStoredTheme())) applyTheme(getStoredTheme(), false);
-		function resolveDialog(target) {
-			if (!target) return null;
-			if (isLegacyCollection(target)) return resolveDialog(target[0]);
-			if (typeof target === "string") return document.querySelector(target);
-			if (typeof HTMLDialogElement !== "undefined" && target instanceof HTMLDialogElement) return target;
-			if (isElement(target) && target.nodeName === "DIALOG") return target;
-			return null;
-		}
-		function getFocusableElement(dialog) {
-			return dialog.querySelector("[autofocus], [data-modal-autofocus], " + focusableSelector);
-		}
-		function focusDialog(dialog) {
-			const focusTarget = getFocusableElement(dialog);
-			if (focusTarget) {
-				try {
-					focusTarget.focus({ preventScroll: true });
-				} catch (error) {
-					focusTarget.focus();
-				}
-				return;
-			}
-			/* v8 ignore next -- branch depends on caller-provided dialog markup */
-			if (!dialog.hasAttribute("tabindex")) dialog.setAttribute("tabindex", "-1");
-			try {
-				dialog.focus({ preventScroll: true });
-			} catch (error) {
-				dialog.focus();
-			}
-		}
-		function lockScroll() {
-			if (scrollLockCount > 0) {
-				scrollLockCount += 1;
-				return;
-			}
-			previousBodyOverflow = document.body.style.overflow;
-			previousHtmlOverflow = document.documentElement.style.overflow;
-			document.body.style.overflow = "hidden";
-			document.documentElement.style.overflow = "hidden";
-			scrollLockCount = 1;
-		}
-		function unlockScroll() {
-			/* v8 ignore next -- defensive guard for private scroll-lock bookkeeping */
-			if (scrollLockCount === 0) return;
-			scrollLockCount -= 1;
-			if (scrollLockCount > 0) return;
-			document.body.style.overflow = previousBodyOverflow;
-			document.documentElement.style.overflow = previousHtmlOverflow;
-		}
-		function removeFromOpenDialogs(dialog) {
-			const index = openDialogs.indexOf(dialog);
-			/* v8 ignore next -- defensive removal branch for repeated native close events */
-			if (index >= 0) openDialogs.splice(index, 1);
-		}
-		function restoreFocus(dialog) {
-			const opener = openerMap.get(dialog);
-			/* v8 ignore next -- branch combines browser focus state and opener lifecycle */
-			if (opener && typeof opener.focus === "function" && document.contains(opener)) try {
-				opener.focus({ preventScroll: true });
-			} catch (error) {
-				opener.focus();
-			}
-			openerMap.delete(dialog);
-		}
-		function handleClose(event) {
-			const dialog = event.currentTarget;
-			removeFromOpenDialogs(dialog);
-			dialog.removeAttribute("aria-modal");
-			restoreFocus(dialog);
-			if (fallbackDialogs.has(dialog)) {
-				fallbackDialogs.delete(dialog);
-				unlockScroll();
-				if (scrollLockCount === 0) document.removeEventListener("keydown", handleKeydown);
-			}
-		}
-		function closeDialogElement(dialog, returnValue = "") {
-			if (!dialog) return null;
-			if (!dialog.open) return dialog;
-			if (typeof dialog.close === "function") dialog.close(returnValue);
-			else {
-				dialog.removeAttribute("open");
-				handleClose({ currentTarget: dialog });
-			}
-			return dialog;
-		}
-		function handleBackdropClick(event) {
-			const dialog = event.currentTarget;
-			const target = eventTargetElement(event);
-			if (target === dialog) {
-				closeDialogElement(dialog);
-				return;
-			}
-			/* v8 ignore next -- click target shape is browser-dispatched and covered at API level */
-			if (target && target.closest("[data-modal-close]")) closeDialogElement(dialog);
-		}
-		function handleKeydown(event) {
-			if (event.key !== "Escape") return;
-			const dialog = openDialogs[openDialogs.length - 1];
-			/* v8 ignore next -- fallback Escape listener is only installed while a fallback dialog is open */
-			if (!dialog || !fallbackDialogs.has(dialog)) return;
-			event.preventDefault();
-			closeDialogElement(dialog);
-		}
-		function wireDialog(dialog) {
-			if (wiredDialogs.has(dialog)) return;
-			wiredDialogs.add(dialog);
-			dialog.addEventListener("close", handleClose);
-			dialog.addEventListener("click", handleBackdropClick);
-		}
-		function openDialogElement(dialog) {
-			if (!dialog) return null;
-			wireDialog(dialog);
-			if (dialog.open) return dialog;
-			/* v8 ignore next -- activeElement is browser-owned state */
-			openerMap.set(dialog, document.activeElement instanceof HTMLElement ? document.activeElement : null);
-			dialog.setAttribute("aria-modal", "true");
-			try {
-				if (dialog.isConnected && supportsNativeDialog(dialog)) dialog.showModal();
-				else throw new Error("dialog.showModal is unavailable");
-			} catch (error) {
-				dialog.setAttribute("open", "");
-				fallbackDialogs.add(dialog);
-				lockScroll();
-			}
-			/* v8 ignore next -- duplicate open state is guarded by the public open early-return */
-			if (!openDialogs.includes(dialog)) openDialogs.push(dialog);
-			focusDialog(dialog);
-			if (fallbackDialogs.has(dialog)) document.addEventListener("keydown", handleKeydown);
-			return dialog;
-		}
-		function toggleDialogElement(dialog) {
-			if (!dialog) return null;
-			return dialog.open ? closeDialogElement(dialog) : openDialogElement(dialog);
-		}
-		legacy.modal = {
-			open(target) {
-				return openDialogElement(resolveDialog(target));
-			},
-			close(target, returnValue) {
-				return closeDialogElement(resolveDialog(target), returnValue);
-			},
-			toggle(target) {
-				return toggleDialogElement(resolveDialog(target));
-			}
-		};
-		function resolveToast(target) {
-			if (!target) return null;
-			if (isLegacyCollection(target)) return resolveToast(target[0]);
-			if (typeof target === "string") return document.querySelector(target);
-			if (isElement(target) && target.matches(".toast, [data-toast]")) return target;
-			return null;
-		}
-		function normalizeToastPosition(position) {
-			return isToastPosition(position) ? position : "bottom-right";
-		}
-		function getToastRegion(position) {
-			const normalizedPosition = normalizeToastPosition(position);
-			let region = document.querySelector("[data-toast-region][data-position=\"" + normalizedPosition + "\"], .toast-region[data-position=\"" + normalizedPosition + "\"]");
-			if (region) return region;
-			region = document.createElement("div");
-			region.className = "toast-region";
-			region.dataset.position = normalizedPosition;
-			region.dataset.toastRegion = "";
-			region.setAttribute("aria-live", "polite");
-			region.setAttribute("aria-atomic", "false");
-			document.body.append(region);
-			return region;
-		}
-		function normalizeToastOptions(message, options) {
-			if (message && typeof message === "object" && !("nodeType" in message) && !("jquery" in message)) return Object.assign({}, message);
-			return Object.assign({}, options, { message: isLegacyCollection(message) ? message[0] : message });
-		}
-		function resolveToastContainer(target) {
-			/* v8 ignore next -- public toast callers only resolve truthy container targets */
-			if (!target) return null;
-			if (isLegacyCollection(target)) return resolveToastContainer(target[0]);
-			if (typeof target === "string") return document.querySelector(target);
-			if (isElement(target)) return target;
-			return null;
-		}
-		function setToastContent(toast, options) {
-			const body = document.createElement("div");
-			body.className = "toast-body";
-			if (options.title) {
-				const title = document.createElement("strong");
-				title.className = "toast-title";
-				title.textContent = options.title;
-				body.append(title);
-			}
-			if (options.message && typeof options.message === "object" && "nodeType" in options.message) body.append(options.message);
-			else {
-				const message = document.createElement("span");
-				message.textContent = options.message || "";
-				body.append(message);
-			}
-			toast.append(body);
-		}
-		function closeToastElement(toast) {
-			if (!toast) return null;
-			const timer = toastTimers.get(toast);
-			if (timer) {
-				window.clearTimeout(timer);
-				toastTimers.delete(toast);
-			}
-			toast.dispatchEvent(new CustomEvent("toast:close", { bubbles: true }));
-			toast.remove();
-			return toast;
-		}
-		function showToast(message, options) {
-			const nextOptions = normalizeToastOptions(message, options);
-			const type = nextOptions.type && [
-				"info",
-				"success",
-				"warning",
-				"danger",
-				"muted"
-			].includes(nextOptions.type) ? nextOptions.type : "info";
-			const region = nextOptions.container ? resolveToastContainer(nextOptions.container) : getToastRegion(nextOptions.position);
-			const toast = document.createElement("section");
-			const duration = typeof nextOptions.duration === "number" ? nextOptions.duration : 5e3;
-			if (!region) return null;
-			toast.className = "toast";
-			toast.dataset.toast = "";
-			toast.setAttribute("role", type === "danger" ? "alert" : "status");
-			if (type !== "info") toast.classList.add("toast-" + type);
-			setToastContent(toast, nextOptions);
-			if (nextOptions.dismissible !== false) {
-				const closeButton = document.createElement("button");
-				closeButton.type = "button";
-				closeButton.className = "toast-close";
-				closeButton.setAttribute("aria-label", nextOptions.closeLabel || "Close notification");
-				closeButton.textContent = nextOptions.closeText || "Close";
-				closeButton.addEventListener("click", function() {
-					closeToastElement(toast);
-				});
-				toast.append(closeButton);
-			}
-			region.append(toast);
-			toast.dispatchEvent(new CustomEvent("toast:show", { bubbles: true }));
-			if (duration > 0) toastTimers.set(toast, window.setTimeout(function() {
-				closeToastElement(toast);
-			}, duration));
-			return toast;
-		}
-		function clearToasts(target) {
-			/* v8 ignore next -- public clear covers both document and resolved-container behavior */
-			const rootElement = target ? resolveToastContainer(target) : document;
-			const toasts = rootElement ? Array.from(rootElement.querySelectorAll(".toast, [data-toast]")) : [];
-			toasts.forEach(closeToastElement);
-			return toasts;
-		}
-		legacy.toast = {
-			show(message, options) {
-				return showToast(message, options);
-			},
-			close(target) {
-				return closeToastElement(resolveToast(target));
-			},
-			clear(target) {
-				return clearToasts(target);
-			}
-		};
-		function resolveElement(target) {
-			if (!target) return null;
-			if (isLegacyCollection(target)) return resolveElement(target[0]);
-			if (typeof target === "string") return document.querySelector(target);
-			/* v8 ignore next -- resolver fallback for non-element internal callers */
-			return isElement(target) ? target : null;
-		}
-		function resolvePopoverTrigger(target) {
-			const element = resolveElement(target);
-			if (!element) return null;
-			if (element.matches(popoverTriggerSelector)) return element;
-			return element.closest(popoverTriggerSelector);
-		}
-		function resolvePopover(target) {
-			const element = resolveElement(target);
-			if (!element) return null;
-			if (element.matches(".popover, [data-popover-content]")) return element;
-			const trigger = resolvePopoverTrigger(element);
-			/* v8 ignore next -- public close/open paths resolve trigger and content separately */
-			return trigger ? getTriggerPopover(trigger) : null;
-		}
-		function getTriggerPopover(trigger) {
-			const target = trigger.getAttribute("data-popover-target") || trigger.getAttribute("data-popover") || trigger.getAttribute("aria-controls");
-			if (!target) return null;
-			if (target.charAt(0) === "#") return document.querySelector(target);
-			return document.getElementById(target);
-		}
-		function getPopoverPlacement(trigger) {
-			const placement = trigger.getAttribute("data-popover-placement");
-			return isPopoverPlacement(placement) ? placement : "bottom";
-		}
-		function positionPopover(trigger, popover) {
-			const gap = 4;
-			const margin = 8;
-			const placement = getPopoverPlacement(trigger);
-			const triggerRect = trigger.getBoundingClientRect();
-			const popoverRect = popover.getBoundingClientRect();
-			let top = triggerRect.bottom + gap;
-			let left = triggerRect.left;
-			if (placement === "top") {
-				top = triggerRect.top - popoverRect.height - gap;
-				left = triggerRect.left;
-			} else if (placement === "right") {
-				top = triggerRect.top;
-				left = triggerRect.right + gap;
-			} else if (placement === "left") {
-				top = triggerRect.top;
-				left = triggerRect.left - popoverRect.width - gap;
-			}
-			top = Math.max(margin, Math.min(top, window.innerHeight - popoverRect.height - margin));
-			left = Math.max(margin, Math.min(left, window.innerWidth - popoverRect.width - margin));
-			popover.style.top = top + "px";
-			popover.style.left = left + "px";
-		}
-		function closePopover(trigger) {
-			/* v8 ignore next -- trigger fallback is driven by document-level close handlers */
-			const currentTrigger = trigger || openPopoverTrigger;
-			/* v8 ignore next -- paired with currentTrigger fallback above */
-			const popover = currentTrigger ? getTriggerPopover(currentTrigger) : null;
-			if (!currentTrigger || !popover) return null;
-			popover.hidden = true;
-			currentTrigger.setAttribute("aria-expanded", "false");
-			/* v8 ignore next -- depends on whether close was invoked directly or globally */
-			if (openPopoverTrigger === currentTrigger) openPopoverTrigger = null;
-			return popover;
-		}
-		function openPopover(trigger) {
-			/* v8 ignore next -- null trigger is covered by the public no-op API branch */
-			const popover = trigger ? getTriggerPopover(trigger) : null;
-			if (!trigger || !popover) return null;
-			if (openPopoverTrigger && openPopoverTrigger !== trigger) closePopover(openPopoverTrigger);
-			wirePopoverTrigger(trigger);
-			popover.hidden = false;
-			trigger.setAttribute("aria-expanded", "true");
-			openPopoverTrigger = trigger;
-			positionPopover(trigger, popover);
-			return popover;
-		}
-		function togglePopover(trigger) {
-			/* v8 ignore next -- null trigger is covered by the public no-op API branch */
-			const popover = trigger ? getTriggerPopover(trigger) : null;
-			if (!popover) return null;
-			return popover.hidden ? openPopover(trigger) : closePopover(trigger);
-		}
-		function handlePopoverClick(event) {
-			event.preventDefault();
-			togglePopover(currentTargetElement(event));
-		}
-		function handlePopoverKeydown(event) {
-			if (event.key !== "Escape") return;
-			const trigger = currentTargetElement(event);
-			/* v8 ignore next -- browser-dispatched listener events always provide the trigger as currentTarget */
-			if (!trigger) return;
-			const popover = getTriggerPopover(trigger);
-			if (!popover || popover.hidden) return;
-			event.preventDefault();
-			closePopover(trigger);
-			/* v8 ignore next -- focusability is browser/element dependent */
-			if (trigger instanceof HTMLElement) trigger.focus();
-		}
-		function handleDocumentPopoverClick(event) {
-			if (!openPopoverTrigger) return;
-			const target = eventTargetElement(event);
-			if (!target) return;
-			const popover = getTriggerPopover(openPopoverTrigger);
-			if (openPopoverTrigger.contains(target) || popover && popover.contains(target)) return;
-			closePopover(openPopoverTrigger);
-		}
-		function handleDocumentPopoverKeydown(event) {
-			if (event.key !== "Escape" || !openPopoverTrigger) return;
-			event.preventDefault();
-			closePopover(openPopoverTrigger);
-		}
-		function updateOpenPopoverPosition() {
-			if (!openPopoverTrigger) return;
-			const popover = getTriggerPopover(openPopoverTrigger);
-			/* v8 ignore next -- resize/scroll repositioning depends on current open state */
-			if (popover && !popover.hidden) positionPopover(openPopoverTrigger, popover);
-		}
-		function wirePopoverTrigger(trigger) {
-			const popover = getTriggerPopover(trigger);
-			if (!popover) return trigger;
-			/* v8 ignore next -- target id resolution is already validated before this repair branch */
-			if (!popover.id && trigger.getAttribute("data-popover-target"))
- /* v8 ignore next -- a target resolved by selector already has the id used to resolve it */
-			popover.id = (trigger.getAttribute("data-popover-target") || "").replace(/^#/, "");
-			trigger.setAttribute("aria-haspopup", "dialog");
-			/* v8 ignore next -- initial aria-expanded mirrors caller-provided hidden state */
-			trigger.setAttribute("aria-expanded", popover.hidden ? "false" : "true");
-			if (popover.id)
- /* v8 ignore next -- aria-controls is only omitted for anonymous popover content */
-			trigger.setAttribute("aria-controls", popover.id);
-			if (!popover.hasAttribute("role")) popover.setAttribute("role", "dialog");
-			if (!wiredPopoverTriggers.has(trigger)) {
-				wiredPopoverTriggers.add(trigger);
-				listen(trigger, "click", handlePopoverClick);
-				listen(trigger, "keydown", handlePopoverKeydown);
-			}
-			return trigger;
-		}
-		function setupPopover(target) {
-			const trigger = resolvePopoverTrigger(target);
-			return trigger ? wirePopoverTrigger(trigger) : null;
-		}
-		legacy.popover = {
-			setup(target) {
-				return setupPopover(target);
-			},
-			open(target) {
-				return openPopover(resolvePopoverTrigger(target));
-			},
-			close(target) {
-				const trigger = resolvePopoverTrigger(target);
-				if (trigger) return closePopover(trigger);
-				const popover = resolvePopover(target);
-				return popover && openPopoverTrigger && getTriggerPopover(openPopoverTrigger) === popover ? closePopover(openPopoverTrigger) : popover;
-			},
-			toggle(target) {
-				return togglePopover(resolvePopoverTrigger(target));
-			}
-		};
-		function resolveTabs(target) {
-			if (!target) return null;
-			if (isLegacyCollection(target)) return resolveTabs(target[0]);
-			if (typeof target === "string") return document.querySelector(target);
-			if (isElement(target)) {
-				if (target.matches("[data-tabs], .tabs")) return target;
-				return target.closest("[data-tabs], .tabs");
-			}
-			return null;
-		}
-		function getTabs(rootElement) {
-			const tabList = Array.from(rootElement.children).find((element) => element.matches("[role=\"tablist\"], .tabs-list"));
-			if (!tabList) return [];
-			return Array.from(tabList.children).filter((element) => element.matches("[role=\"tab\"]"));
-		}
-		function getTabPanels(rootElement) {
-			return Array.from(rootElement.children).filter((element) => element.matches("[role=\"tabpanel\"]"));
-		}
-		function getTabPanel(rootElement, tab) {
-			const panelId = tab.getAttribute("aria-controls");
-			if (!panelId) return null;
-			try {
-				return rootElement.querySelector("#" + CSS.escape(panelId));
-			} catch (error) {
-				return document.getElementById(panelId);
-			}
-		}
-		function selectTab(tab, setFocus) {
-			const rootElement = resolveTabs(tab);
-			if (!rootElement || !tab) return null;
-			getTabs(rootElement).forEach((currentTab) => {
-				const selected = currentTab === tab;
-				const panel = getTabPanel(rootElement, currentTab);
-				currentTab.setAttribute("aria-selected", selected ? "true" : "false");
-				currentTab.setAttribute("tabindex", selected ? "0" : "-1");
-				if (panel) panel.hidden = !selected;
-			});
-			if (setFocus && tab instanceof HTMLElement) tab.focus();
-			return tab;
-		}
-		function selectTabByIndex(rootElement, index, setFocus) {
-			const tab = getTabs(rootElement)[index];
-			if (!tab) return null;
-			return selectTab(tab, setFocus);
-		}
-		function handleTabClick(event) {
-			const target = eventTargetElement(event);
-			/* v8 ignore next -- browser click events provide element targets for delegated tab clicks */
-			const tab = target ? target.closest("[role=\"tab\"]") : null;
-			/* v8 ignore next -- delegated no-op branch for non-tab clicks */
-			if (tab) selectTab(tab, false);
-		}
-		function handleTabKeydown(event) {
-			const rootElement = resolveTabs(currentTargetElement(event));
-			const target = eventTargetElement(event);
-			if (!rootElement || !target) return;
-			const tabs = getTabs(rootElement);
-			const currentIndex = tabs.indexOf(target);
-			/* v8 ignore next -- tab keyboard listeners are scoped to tab controls in normal use */
-			if (currentIndex < 0) return;
-			let nextIndex = currentIndex;
-			if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (currentIndex + 1) % tabs.length;
-			else if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-			else if (event.key === "Home") nextIndex = 0;
-			else if (event.key === "End") nextIndex = tabs.length - 1;
-			else return;
-			event.preventDefault();
-			selectTabByIndex(rootElement, nextIndex, true);
-		}
-		function setupTabs(target) {
-			const rootElement = resolveTabs(target);
-			if (!rootElement || wiredTabs.has(rootElement)) return rootElement;
-			wiredTabs.add(rootElement);
-			listen(rootElement, "click", handleTabClick);
-			listen(rootElement, "keydown", handleTabKeydown);
-			const tabs = getTabs(rootElement);
-			const selectedTab = tabs.find((tab) => tab.getAttribute("aria-selected") === "true") || tabs[0];
-			getTabPanels(rootElement).forEach((panel) => {
-				if (!panel.hasAttribute("tabindex")) panel.setAttribute("tabindex", "0");
-			});
-			if (selectedTab) selectTab(selectedTab, false);
-			return rootElement;
-		}
-		legacy.tabs = {
-			setup(target) {
-				return setupTabs(target);
-			},
-			select(target, index) {
-				const rootElement = resolveTabs(target);
-				if (!rootElement) return null;
-				if (typeof index === "number") return selectTabByIndex(rootElement, index, false);
-				return selectTab(rootElement.querySelector(index), false);
-			}
-		};
+	//#region src/internal.ts
+	function isLegacyCollection(target) {
+		return typeof target === "object" && target !== null && "jquery" in target;
+	}
+	function isElement(target) {
+		return typeof target === "object" && target !== null && "nodeType" in target && target.nodeType === 1;
+	}
+	function isSelectElement(target) {
+		return isElement(target) && target.nodeName === "SELECT";
+	}
+	function eventTargetElement(event) {
+		return isElement(event.target) ? event.target : null;
+	}
+	function currentTargetElement(event) {
+		/* v8 ignore next -- browser component listeners always dispatch from elements */
+		return isElement(event.currentTarget) ? event.currentTarget : null;
+	}
+	function listen(target, type, listener) {
+		target.addEventListener(type, listener);
+	}
+	//#endregion
+	//#region src/features/dragdrop.ts
+	var wiredDragdropBoards = /* @__PURE__ */ new WeakSet();
+	var dragdropOptions = /* @__PURE__ */ new WeakMap();
+	var dragdropBoardSelector = "[data-dragdrop], .dragdrop";
+	var dragdropColumnSelector = "[data-dragdrop-column], .dragdrop-column";
+	var dragdropItemSelector = "[data-dragdrop-item], .dragdrop-item";
+	var dragdropState = null;
+	function installDragdrop(legacy) {
 		function resolveDragdropBoard(target) {
 			if (!target) return null;
 			if (isLegacyCollection(target)) return resolveDragdropBoard(target[0]);
@@ -779,6 +174,283 @@
 		legacy.dragdrop = { setup(target, options) {
 			return setupDragdrop(target, options);
 		} };
+		document.addEventListener("DOMContentLoaded", function() {
+			document.querySelectorAll(dragdropBoardSelector).forEach((board) => {
+				setupDragdrop(board);
+			});
+		});
+	}
+	//#endregion
+	//#region src/jquery.ts
+	function installJQueryBridges(root, legacy) {
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.modal) root.jQuery.fn.modal = function(action) {
+			const method = action || "open";
+			return this.each(function() {
+				if (method === "close") {
+					legacy.modal.close(this);
+					return;
+				}
+				if (method === "toggle") {
+					legacy.modal.toggle(this);
+					return;
+				}
+				legacy.modal.open(this);
+			});
+		};
+		if (root.jQuery && !root.jQuery.toast) root.jQuery.toast = function(message, options) {
+			return legacy.toast.show(message, options);
+		};
+		if (root.jQuery && !root.jQuery.theme) root.jQuery.theme = function(theme) {
+			return theme === void 0 ? legacy.theme.get() : legacy.theme.set(theme);
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.toast) root.jQuery.fn.toast = function(action) {
+			return this.each(function() {
+				if (action === "close") {
+					legacy.toast.close(this);
+					return;
+				}
+				/* v8 ignore next -- jQuery bridge accepts object options or default toast options */
+				legacy.toast.show(this, typeof action === "object" ? action : void 0);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.tabs) root.jQuery.fn.tabs = function(action, index) {
+			return this.each(function() {
+				if (action === "select" && index !== void 0) {
+					legacy.tabs.select(this, index);
+					return;
+				}
+				legacy.tabs.setup(this);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.popover) root.jQuery.fn.popover = function(action) {
+			return this.each(function() {
+				if (action === "open") {
+					legacy.popover.open(this);
+					return;
+				}
+				if (action === "close") {
+					legacy.popover.close(this);
+					return;
+				}
+				if (action === "toggle") {
+					legacy.popover.toggle(this);
+					return;
+				}
+				legacy.popover.setup(this);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.dragdrop) root.jQuery.fn.dragdrop = function(options) {
+			return this.each(function() {
+				legacy.dragdrop.setup(this, options);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.multiselect) root.jQuery.fn.multiselect = function(action) {
+			return this.each(function() {
+				if (action === "open") {
+					legacy.multiselect.open(this);
+					return;
+				}
+				if (action === "close") {
+					legacy.multiselect.close(this);
+					return;
+				}
+				if (action === "toggle") {
+					legacy.multiselect.toggle(this);
+					return;
+				}
+				legacy.multiselect.setup(this);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.pagination) root.jQuery.fn.pagination = function(action, value) {
+			return this.each(function() {
+				if (action === "goTo" && value !== void 0) {
+					legacy.pagination.goTo(this, value);
+					return;
+				}
+				if (action === "pageSize" && value !== void 0) {
+					legacy.pagination.pageSize(this, value);
+					return;
+				}
+				if (action === "refresh") {
+					legacy.pagination.refresh(this);
+					return;
+				}
+				/* v8 ignore next -- jQuery bridge accepts object options or default setup options */
+				legacy.pagination.setup(this, typeof action === "object" ? action : void 0);
+			});
+		};
+	}
+	//#endregion
+	//#region src/features/modal.ts
+	var openDialogs = [];
+	var openerMap = /* @__PURE__ */ new WeakMap();
+	var fallbackDialogs = /* @__PURE__ */ new WeakSet();
+	var wiredDialogs = /* @__PURE__ */ new WeakSet();
+	var supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
+	var scrollLockCount = 0;
+	var previousBodyOverflow = "";
+	var previousHtmlOverflow = "";
+	var focusableSelector = [
+		"a[href]",
+		"button:not([disabled])",
+		"input:not([disabled])",
+		"select:not([disabled])",
+		"textarea:not([disabled])",
+		"[tabindex]:not([tabindex=\"-1\"])"
+	].join(", ");
+	function installModal(legacy) {
+		function resolveDialog(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveDialog(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (typeof HTMLDialogElement !== "undefined" && target instanceof HTMLDialogElement) return target;
+			if (isElement(target) && target.nodeName === "DIALOG") return target;
+			return null;
+		}
+		function getFocusableElement(dialog) {
+			return dialog.querySelector("[autofocus], [data-modal-autofocus], " + focusableSelector);
+		}
+		function focusDialog(dialog) {
+			const focusTarget = getFocusableElement(dialog);
+			if (focusTarget) {
+				try {
+					focusTarget.focus({ preventScroll: true });
+				} catch (error) {
+					focusTarget.focus();
+				}
+				return;
+			}
+			/* v8 ignore next -- branch depends on caller-provided dialog markup */
+			if (!dialog.hasAttribute("tabindex")) dialog.setAttribute("tabindex", "-1");
+			try {
+				dialog.focus({ preventScroll: true });
+			} catch (error) {
+				dialog.focus();
+			}
+		}
+		function lockScroll() {
+			if (scrollLockCount > 0) {
+				scrollLockCount += 1;
+				return;
+			}
+			previousBodyOverflow = document.body.style.overflow;
+			previousHtmlOverflow = document.documentElement.style.overflow;
+			document.body.style.overflow = "hidden";
+			document.documentElement.style.overflow = "hidden";
+			scrollLockCount = 1;
+		}
+		function unlockScroll() {
+			/* v8 ignore next -- defensive guard for private scroll-lock bookkeeping */
+			if (scrollLockCount === 0) return;
+			scrollLockCount -= 1;
+			if (scrollLockCount > 0) return;
+			document.body.style.overflow = previousBodyOverflow;
+			document.documentElement.style.overflow = previousHtmlOverflow;
+		}
+		function removeFromOpenDialogs(dialog) {
+			const index = openDialogs.indexOf(dialog);
+			/* v8 ignore next -- defensive removal branch for repeated native close events */
+			if (index >= 0) openDialogs.splice(index, 1);
+		}
+		function restoreFocus(dialog) {
+			const opener = openerMap.get(dialog);
+			/* v8 ignore next -- branch combines browser focus state and opener lifecycle */
+			if (opener && typeof opener.focus === "function" && document.contains(opener)) try {
+				opener.focus({ preventScroll: true });
+			} catch (error) {
+				opener.focus();
+			}
+			openerMap.delete(dialog);
+		}
+		function handleClose(event) {
+			const dialog = event.currentTarget;
+			removeFromOpenDialogs(dialog);
+			dialog.removeAttribute("aria-modal");
+			restoreFocus(dialog);
+			if (fallbackDialogs.has(dialog)) {
+				fallbackDialogs.delete(dialog);
+				unlockScroll();
+				if (scrollLockCount === 0) document.removeEventListener("keydown", handleKeydown);
+			}
+		}
+		function closeDialogElement(dialog, returnValue = "") {
+			if (!dialog) return null;
+			if (!dialog.open) return dialog;
+			if (typeof dialog.close === "function") dialog.close(returnValue);
+			else {
+				dialog.removeAttribute("open");
+				handleClose({ currentTarget: dialog });
+			}
+			return dialog;
+		}
+		function handleBackdropClick(event) {
+			const dialog = event.currentTarget;
+			const target = eventTargetElement(event);
+			if (target === dialog) {
+				closeDialogElement(dialog);
+				return;
+			}
+			/* v8 ignore next -- click target shape is browser-dispatched and covered at API level */
+			if (target && target.closest("[data-modal-close]")) closeDialogElement(dialog);
+		}
+		function handleKeydown(event) {
+			if (event.key !== "Escape") return;
+			const dialog = openDialogs[openDialogs.length - 1];
+			/* v8 ignore next -- fallback Escape listener is only installed while a fallback dialog is open */
+			if (!dialog || !fallbackDialogs.has(dialog)) return;
+			event.preventDefault();
+			closeDialogElement(dialog);
+		}
+		function wireDialog(dialog) {
+			if (wiredDialogs.has(dialog)) return;
+			wiredDialogs.add(dialog);
+			dialog.addEventListener("close", handleClose);
+			dialog.addEventListener("click", handleBackdropClick);
+		}
+		function openDialogElement(dialog) {
+			if (!dialog) return null;
+			wireDialog(dialog);
+			if (dialog.open) return dialog;
+			/* v8 ignore next -- activeElement is browser-owned state */
+			openerMap.set(dialog, document.activeElement instanceof HTMLElement ? document.activeElement : null);
+			dialog.setAttribute("aria-modal", "true");
+			try {
+				if (dialog.isConnected && supportsNativeDialog(dialog)) dialog.showModal();
+				else throw new Error("dialog.showModal is unavailable");
+			} catch (error) {
+				dialog.setAttribute("open", "");
+				fallbackDialogs.add(dialog);
+				lockScroll();
+			}
+			/* v8 ignore next -- duplicate open state is guarded by the public open early-return */
+			if (!openDialogs.includes(dialog)) openDialogs.push(dialog);
+			focusDialog(dialog);
+			if (fallbackDialogs.has(dialog)) document.addEventListener("keydown", handleKeydown);
+			return dialog;
+		}
+		function toggleDialogElement(dialog) {
+			if (!dialog) return null;
+			return dialog.open ? closeDialogElement(dialog) : openDialogElement(dialog);
+		}
+		legacy.modal = {
+			open(target) {
+				return openDialogElement(resolveDialog(target));
+			},
+			close(target, returnValue) {
+				return closeDialogElement(resolveDialog(target), returnValue);
+			},
+			toggle(target) {
+				return toggleDialogElement(resolveDialog(target));
+			}
+		};
+	}
+	//#endregion
+	//#region src/features/multiselect.ts
+	var wiredMultiselects = /* @__PURE__ */ new WeakSet();
+	var multiselectMap = /* @__PURE__ */ new WeakMap();
+	var multiselectSelector = "select[multiple][data-multiselect], select[multiple].multiselect-source";
+	var multiselectId = 0;
+	function installMultiselect(legacy) {
 		function resolveMultiselect(target) {
 			if (!target) return null;
 			if (isLegacyCollection(target)) return resolveMultiselect(target[0]);
@@ -1009,6 +681,18 @@
 				return toggleMultiselect(resolveMultiselect(target));
 			}
 		};
+		document.addEventListener("DOMContentLoaded", function() {
+			document.querySelectorAll(multiselectSelector).forEach(setupMultiselect);
+		});
+		document.addEventListener("click", handleDocumentMultiselectClick);
+	}
+	//#endregion
+	//#region src/features/pagination.ts
+	var wiredPaginations = /* @__PURE__ */ new WeakSet();
+	var paginationOptions = /* @__PURE__ */ new WeakMap();
+	var paginationState = /* @__PURE__ */ new WeakMap();
+	var paginationSelector = "[data-pagination], .pagination";
+	function installPagination(legacy) {
 		function resolvePagination(target) {
 			if (!target) return null;
 			if (isLegacyCollection(target)) return resolvePagination(target[0]);
@@ -1295,117 +979,488 @@
 			}
 		};
 		document.addEventListener("DOMContentLoaded", function() {
-			document.querySelectorAll(popoverTriggerSelector).forEach(setupPopover);
-			document.querySelectorAll("[data-tabs], .tabs").forEach(setupTabs);
-			document.querySelectorAll(dragdropBoardSelector).forEach((board) => {
-				setupDragdrop(board);
-			});
-			document.querySelectorAll(multiselectSelector).forEach(setupMultiselect);
 			document.querySelectorAll("[data-pagination]").forEach((rootElement) => {
 				setupPagination(rootElement);
 			});
 		});
-		document.addEventListener("click", handleDocumentMultiselectClick);
+	}
+	//#endregion
+	//#region src/features/popover.ts
+	var legacyPopoverPlacements = [
+		"top",
+		"right",
+		"bottom",
+		"left"
+	];
+	var wiredPopoverTriggers = /* @__PURE__ */ new WeakSet();
+	var popoverTriggerSelector = "[data-popover-target], [data-popover]";
+	var openPopoverTrigger = null;
+	function isPopoverPlacement(placement) {
+		return typeof placement === "string" && legacyPopoverPlacements.includes(placement);
+	}
+	function installPopover(legacy) {
+		function resolveElement(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveElement(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			/* v8 ignore next -- resolver fallback for non-element internal callers */
+			return isElement(target) ? target : null;
+		}
+		function resolvePopoverTrigger(target) {
+			const element = resolveElement(target);
+			if (!element) return null;
+			if (element.matches(popoverTriggerSelector)) return element;
+			return element.closest(popoverTriggerSelector);
+		}
+		function resolvePopover(target) {
+			const element = resolveElement(target);
+			if (!element) return null;
+			if (element.matches(".popover, [data-popover-content]")) return element;
+			const trigger = resolvePopoverTrigger(element);
+			/* v8 ignore next -- public close/open paths resolve trigger and content separately */
+			return trigger ? getTriggerPopover(trigger) : null;
+		}
+		function getTriggerPopover(trigger) {
+			const target = trigger.getAttribute("data-popover-target") || trigger.getAttribute("data-popover") || trigger.getAttribute("aria-controls");
+			if (!target) return null;
+			if (target.charAt(0) === "#") return document.querySelector(target);
+			return document.getElementById(target);
+		}
+		function getPopoverPlacement(trigger) {
+			const placement = trigger.getAttribute("data-popover-placement");
+			return isPopoverPlacement(placement) ? placement : "bottom";
+		}
+		function positionPopover(trigger, popover) {
+			const gap = 4;
+			const margin = 8;
+			const placement = getPopoverPlacement(trigger);
+			const triggerRect = trigger.getBoundingClientRect();
+			const popoverRect = popover.getBoundingClientRect();
+			let top = triggerRect.bottom + gap;
+			let left = triggerRect.left;
+			if (placement === "top") {
+				top = triggerRect.top - popoverRect.height - gap;
+				left = triggerRect.left;
+			} else if (placement === "right") {
+				top = triggerRect.top;
+				left = triggerRect.right + gap;
+			} else if (placement === "left") {
+				top = triggerRect.top;
+				left = triggerRect.left - popoverRect.width - gap;
+			}
+			top = Math.max(margin, Math.min(top, window.innerHeight - popoverRect.height - margin));
+			left = Math.max(margin, Math.min(left, window.innerWidth - popoverRect.width - margin));
+			popover.style.top = top + "px";
+			popover.style.left = left + "px";
+		}
+		function closePopover(trigger) {
+			/* v8 ignore next -- trigger fallback is driven by document-level close handlers */
+			const currentTrigger = trigger || openPopoverTrigger;
+			/* v8 ignore next -- paired with currentTrigger fallback above */
+			const popover = currentTrigger ? getTriggerPopover(currentTrigger) : null;
+			if (!currentTrigger || !popover) return null;
+			popover.hidden = true;
+			currentTrigger.setAttribute("aria-expanded", "false");
+			/* v8 ignore next -- depends on whether close was invoked directly or globally */
+			if (openPopoverTrigger === currentTrigger) openPopoverTrigger = null;
+			return popover;
+		}
+		function openPopover(trigger) {
+			/* v8 ignore next -- null trigger is covered by the public no-op API branch */
+			const popover = trigger ? getTriggerPopover(trigger) : null;
+			if (!trigger || !popover) return null;
+			if (openPopoverTrigger && openPopoverTrigger !== trigger) closePopover(openPopoverTrigger);
+			wirePopoverTrigger(trigger);
+			popover.hidden = false;
+			trigger.setAttribute("aria-expanded", "true");
+			openPopoverTrigger = trigger;
+			positionPopover(trigger, popover);
+			return popover;
+		}
+		function togglePopover(trigger) {
+			/* v8 ignore next -- null trigger is covered by the public no-op API branch */
+			const popover = trigger ? getTriggerPopover(trigger) : null;
+			if (!popover) return null;
+			return popover.hidden ? openPopover(trigger) : closePopover(trigger);
+		}
+		function handlePopoverClick(event) {
+			event.preventDefault();
+			togglePopover(currentTargetElement(event));
+		}
+		function handlePopoverKeydown(event) {
+			if (event.key !== "Escape") return;
+			const trigger = currentTargetElement(event);
+			/* v8 ignore next -- browser-dispatched listener events always provide the trigger as currentTarget */
+			if (!trigger) return;
+			const popover = getTriggerPopover(trigger);
+			if (!popover || popover.hidden) return;
+			event.preventDefault();
+			closePopover(trigger);
+			/* v8 ignore next -- focusability is browser/element dependent */
+			if (trigger instanceof HTMLElement) trigger.focus();
+		}
+		function handleDocumentPopoverClick(event) {
+			if (!openPopoverTrigger) return;
+			const target = eventTargetElement(event);
+			if (!target) return;
+			const popover = getTriggerPopover(openPopoverTrigger);
+			if (openPopoverTrigger.contains(target) || popover && popover.contains(target)) return;
+			closePopover(openPopoverTrigger);
+		}
+		function handleDocumentPopoverKeydown(event) {
+			if (event.key !== "Escape" || !openPopoverTrigger) return;
+			event.preventDefault();
+			closePopover(openPopoverTrigger);
+		}
+		function updateOpenPopoverPosition() {
+			if (!openPopoverTrigger) return;
+			const popover = getTriggerPopover(openPopoverTrigger);
+			/* v8 ignore next -- resize/scroll repositioning depends on current open state */
+			if (popover && !popover.hidden) positionPopover(openPopoverTrigger, popover);
+		}
+		function wirePopoverTrigger(trigger) {
+			const popover = getTriggerPopover(trigger);
+			if (!popover) return trigger;
+			/* v8 ignore next -- target id resolution is already validated before this repair branch */
+			if (!popover.id && trigger.getAttribute("data-popover-target"))
+ /* v8 ignore next -- a target resolved by selector already has the id used to resolve it */
+			popover.id = (trigger.getAttribute("data-popover-target") || "").replace(/^#/, "");
+			trigger.setAttribute("aria-haspopup", "dialog");
+			/* v8 ignore next -- initial aria-expanded mirrors caller-provided hidden state */
+			trigger.setAttribute("aria-expanded", popover.hidden ? "false" : "true");
+			if (popover.id)
+ /* v8 ignore next -- aria-controls is only omitted for anonymous popover content */
+			trigger.setAttribute("aria-controls", popover.id);
+			if (!popover.hasAttribute("role")) popover.setAttribute("role", "dialog");
+			if (!wiredPopoverTriggers.has(trigger)) {
+				wiredPopoverTriggers.add(trigger);
+				listen(trigger, "click", handlePopoverClick);
+				listen(trigger, "keydown", handlePopoverKeydown);
+			}
+			return trigger;
+		}
+		function setupPopover(target) {
+			const trigger = resolvePopoverTrigger(target);
+			return trigger ? wirePopoverTrigger(trigger) : null;
+		}
+		legacy.popover = {
+			setup(target) {
+				return setupPopover(target);
+			},
+			open(target) {
+				return openPopover(resolvePopoverTrigger(target));
+			},
+			close(target) {
+				const trigger = resolvePopoverTrigger(target);
+				if (trigger) return closePopover(trigger);
+				const popover = resolvePopover(target);
+				return popover && openPopoverTrigger && getTriggerPopover(openPopoverTrigger) === popover ? closePopover(openPopoverTrigger) : popover;
+			},
+			toggle(target) {
+				return togglePopover(resolvePopoverTrigger(target));
+			}
+		};
+		document.addEventListener("DOMContentLoaded", function() {
+			document.querySelectorAll(popoverTriggerSelector).forEach(setupPopover);
+		});
 		document.addEventListener("click", handleDocumentPopoverClick);
 		document.addEventListener("keydown", handleDocumentPopoverKeydown);
 		window.addEventListener("resize", updateOpenPopoverPosition);
 		window.addEventListener("scroll", updateOpenPopoverPosition, true);
-		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.modal) root.jQuery.fn.modal = function(action) {
-			const method = action || "open";
-			return this.each(function() {
-				if (method === "close") {
-					legacy.modal.close(this);
-					return;
-				}
-				if (method === "toggle") {
-					legacy.modal.toggle(this);
-					return;
-				}
-				legacy.modal.open(this);
+	}
+	//#endregion
+	//#region src/features/tabs.ts
+	var wiredTabs = /* @__PURE__ */ new WeakSet();
+	function installTabs(legacy) {
+		function resolveTabs(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveTabs(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (isElement(target)) {
+				if (target.matches("[data-tabs], .tabs")) return target;
+				return target.closest("[data-tabs], .tabs");
+			}
+			return null;
+		}
+		function getTabs(rootElement) {
+			const tabList = Array.from(rootElement.children).find((element) => element.matches("[role=\"tablist\"], .tabs-list"));
+			if (!tabList) return [];
+			return Array.from(tabList.children).filter((element) => element.matches("[role=\"tab\"]"));
+		}
+		function getTabPanels(rootElement) {
+			return Array.from(rootElement.children).filter((element) => element.matches("[role=\"tabpanel\"]"));
+		}
+		function getTabPanel(rootElement, tab) {
+			const panelId = tab.getAttribute("aria-controls");
+			if (!panelId) return null;
+			try {
+				return rootElement.querySelector("#" + CSS.escape(panelId));
+			} catch (error) {
+				return document.getElementById(panelId);
+			}
+		}
+		function selectTab(tab, setFocus) {
+			const rootElement = resolveTabs(tab);
+			if (!rootElement || !tab) return null;
+			getTabs(rootElement).forEach((currentTab) => {
+				const selected = currentTab === tab;
+				const panel = getTabPanel(rootElement, currentTab);
+				currentTab.setAttribute("aria-selected", selected ? "true" : "false");
+				currentTab.setAttribute("tabindex", selected ? "0" : "-1");
+				if (panel) panel.hidden = !selected;
 			});
-		};
-		if (root.jQuery && !root.jQuery.toast) root.jQuery.toast = function(message, options) {
-			return legacy.toast.show(message, options);
-		};
-		if (root.jQuery && !root.jQuery.theme) root.jQuery.theme = function(theme) {
-			return theme === void 0 ? legacy.theme.get() : legacy.theme.set(theme);
-		};
-		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.toast) root.jQuery.fn.toast = function(action) {
-			return this.each(function() {
-				if (action === "close") {
-					legacy.toast.close(this);
-					return;
-				}
-				/* v8 ignore next -- jQuery bridge accepts object options or default toast options */
-				legacy.toast.show(this, typeof action === "object" ? action : void 0);
+			if (setFocus && tab instanceof HTMLElement) tab.focus();
+			return tab;
+		}
+		function selectTabByIndex(rootElement, index, setFocus) {
+			const tab = getTabs(rootElement)[index];
+			if (!tab) return null;
+			return selectTab(tab, setFocus);
+		}
+		function handleTabClick(event) {
+			const target = eventTargetElement(event);
+			/* v8 ignore next -- browser click events provide element targets for delegated tab clicks */
+			const tab = target ? target.closest("[role=\"tab\"]") : null;
+			/* v8 ignore next -- delegated no-op branch for non-tab clicks */
+			if (tab) selectTab(tab, false);
+		}
+		function handleTabKeydown(event) {
+			const rootElement = resolveTabs(currentTargetElement(event));
+			const target = eventTargetElement(event);
+			if (!rootElement || !target) return;
+			const tabs = getTabs(rootElement);
+			const currentIndex = tabs.indexOf(target);
+			/* v8 ignore next -- tab keyboard listeners are scoped to tab controls in normal use */
+			if (currentIndex < 0) return;
+			let nextIndex = currentIndex;
+			if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (currentIndex + 1) % tabs.length;
+			else if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+			else if (event.key === "Home") nextIndex = 0;
+			else if (event.key === "End") nextIndex = tabs.length - 1;
+			else return;
+			event.preventDefault();
+			selectTabByIndex(rootElement, nextIndex, true);
+		}
+		function setupTabs(target) {
+			const rootElement = resolveTabs(target);
+			if (!rootElement || wiredTabs.has(rootElement)) return rootElement;
+			wiredTabs.add(rootElement);
+			listen(rootElement, "click", handleTabClick);
+			listen(rootElement, "keydown", handleTabKeydown);
+			const tabs = getTabs(rootElement);
+			const selectedTab = tabs.find((tab) => tab.getAttribute("aria-selected") === "true") || tabs[0];
+			getTabPanels(rootElement).forEach((panel) => {
+				if (!panel.hasAttribute("tabindex")) panel.setAttribute("tabindex", "0");
 			});
+			if (selectedTab) selectTab(selectedTab, false);
+			return rootElement;
+		}
+		legacy.tabs = {
+			setup(target) {
+				return setupTabs(target);
+			},
+			select(target, index) {
+				const rootElement = resolveTabs(target);
+				if (!rootElement) return null;
+				if (typeof index === "number") return selectTabByIndex(rootElement, index, false);
+				return selectTab(rootElement.querySelector(index), false);
+			}
 		};
-		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.tabs) root.jQuery.fn.tabs = function(action, index) {
-			return this.each(function() {
-				if (action === "select" && index !== void 0) {
-					legacy.tabs.select(this, index);
-					return;
-				}
-				legacy.tabs.setup(this);
-			});
+		document.addEventListener("DOMContentLoaded", function() {
+			document.querySelectorAll("[data-tabs], .tabs").forEach(setupTabs);
+		});
+	}
+	//#endregion
+	//#region src/features/theme.ts
+	var legacyThemes = ["light", "dark"];
+	var legacyThemeStorageKey = "legacy.css.theme";
+	function installTheme(legacy) {
+		function isLegacyTheme(theme) {
+			return typeof theme === "string" && legacyThemes.includes(theme);
+		}
+		function normalizeTheme(theme) {
+			return isLegacyTheme(theme) ? theme : "light";
+		}
+		function getStoredTheme() {
+			try {
+				return window.localStorage.getItem(legacyThemeStorageKey);
+			} catch (error) {
+				return null;
+			}
+		}
+		function storeTheme(theme) {
+			try {
+				window.localStorage.setItem(legacyThemeStorageKey, theme);
+			} catch (error) {
+				return;
+			}
+		}
+		function applyTheme(theme, persist = true) {
+			const nextTheme = normalizeTheme(theme);
+			document.documentElement.dataset.legacyTheme = nextTheme;
+			if (persist) storeTheme(nextTheme);
+			return nextTheme;
+		}
+		legacy.theme = {
+			apply(theme) {
+				return applyTheme(theme || getStoredTheme());
+			},
+			get() {
+				return normalizeTheme(document.documentElement.dataset.legacyTheme || getStoredTheme());
+			},
+			set(theme) {
+				return applyTheme(theme);
+			}
 		};
-		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.popover) root.jQuery.fn.popover = function(action) {
-			return this.each(function() {
-				if (action === "open") {
-					legacy.popover.open(this);
-					return;
-				}
-				if (action === "close") {
-					legacy.popover.close(this);
-					return;
-				}
-				if (action === "toggle") {
-					legacy.popover.toggle(this);
-					return;
-				}
-				legacy.popover.setup(this);
-			});
+		if (isLegacyTheme(getStoredTheme())) applyTheme(getStoredTheme(), false);
+	}
+	//#endregion
+	//#region src/features/toast.ts
+	var legacyToastPositions = [
+		"top-left",
+		"top-right",
+		"bottom-left",
+		"bottom-right"
+	];
+	var toastTimers = /* @__PURE__ */ new WeakMap();
+	function isToastPosition(position) {
+		return typeof position === "string" && legacyToastPositions.includes(position);
+	}
+	function installToast(legacy) {
+		function resolveToast(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveToast(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (isElement(target) && target.matches(".toast, [data-toast]")) return target;
+			return null;
+		}
+		function normalizeToastPosition(position) {
+			return isToastPosition(position) ? position : "bottom-right";
+		}
+		function getToastRegion(position) {
+			const normalizedPosition = normalizeToastPosition(position);
+			let region = document.querySelector("[data-toast-region][data-position=\"" + normalizedPosition + "\"], .toast-region[data-position=\"" + normalizedPosition + "\"]");
+			if (region) return region;
+			region = document.createElement("div");
+			region.className = "toast-region";
+			region.dataset.position = normalizedPosition;
+			region.dataset.toastRegion = "";
+			region.setAttribute("aria-live", "polite");
+			region.setAttribute("aria-atomic", "false");
+			document.body.append(region);
+			return region;
+		}
+		function normalizeToastOptions(message, options) {
+			if (message && typeof message === "object" && !("nodeType" in message) && !("jquery" in message)) return Object.assign({}, message);
+			return Object.assign({}, options, { message: isLegacyCollection(message) ? message[0] : message });
+		}
+		function resolveToastContainer(target) {
+			/* v8 ignore next -- public toast callers only resolve truthy container targets */
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveToastContainer(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (isElement(target)) return target;
+			return null;
+		}
+		function setToastContent(toast, options) {
+			const body = document.createElement("div");
+			body.className = "toast-body";
+			if (options.title) {
+				const title = document.createElement("strong");
+				title.className = "toast-title";
+				title.textContent = options.title;
+				body.append(title);
+			}
+			if (options.message && typeof options.message === "object" && "nodeType" in options.message) body.append(options.message);
+			else {
+				const message = document.createElement("span");
+				message.textContent = options.message || "";
+				body.append(message);
+			}
+			toast.append(body);
+		}
+		function closeToastElement(toast) {
+			if (!toast) return null;
+			const timer = toastTimers.get(toast);
+			if (timer) {
+				window.clearTimeout(timer);
+				toastTimers.delete(toast);
+			}
+			toast.dispatchEvent(new CustomEvent("toast:close", { bubbles: true }));
+			toast.remove();
+			return toast;
+		}
+		function showToast(message, options) {
+			const nextOptions = normalizeToastOptions(message, options);
+			const type = nextOptions.type && [
+				"info",
+				"success",
+				"warning",
+				"danger",
+				"muted"
+			].includes(nextOptions.type) ? nextOptions.type : "info";
+			const region = nextOptions.container ? resolveToastContainer(nextOptions.container) : getToastRegion(nextOptions.position);
+			const toast = document.createElement("section");
+			const duration = typeof nextOptions.duration === "number" ? nextOptions.duration : 5e3;
+			if (!region) return null;
+			toast.className = "toast";
+			toast.dataset.toast = "";
+			toast.setAttribute("role", type === "danger" ? "alert" : "status");
+			if (type !== "info") toast.classList.add("toast-" + type);
+			setToastContent(toast, nextOptions);
+			if (nextOptions.dismissible !== false) {
+				const closeButton = document.createElement("button");
+				closeButton.type = "button";
+				closeButton.className = "toast-close";
+				closeButton.setAttribute("aria-label", nextOptions.closeLabel || "Close notification");
+				closeButton.textContent = nextOptions.closeText || "Close";
+				closeButton.addEventListener("click", function() {
+					closeToastElement(toast);
+				});
+				toast.append(closeButton);
+			}
+			region.append(toast);
+			toast.dispatchEvent(new CustomEvent("toast:show", { bubbles: true }));
+			if (duration > 0) toastTimers.set(toast, window.setTimeout(function() {
+				closeToastElement(toast);
+			}, duration));
+			return toast;
+		}
+		function clearToasts(target) {
+			/* v8 ignore next -- public clear covers both document and resolved-container behavior */
+			const rootElement = target ? resolveToastContainer(target) : document;
+			const toasts = rootElement ? Array.from(rootElement.querySelectorAll(".toast, [data-toast]")) : [];
+			toasts.forEach(closeToastElement);
+			return toasts;
+		}
+		legacy.toast = {
+			show(message, options) {
+				return showToast(message, options);
+			},
+			close(target) {
+				return closeToastElement(resolveToast(target));
+			},
+			clear(target) {
+				return clearToasts(target);
+			}
 		};
-		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.dragdrop) root.jQuery.fn.dragdrop = function(options) {
-			return this.each(function() {
-				legacy.dragdrop.setup(this, options);
-			});
-		};
-		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.multiselect) root.jQuery.fn.multiselect = function(action) {
-			return this.each(function() {
-				if (action === "open") {
-					legacy.multiselect.open(this);
-					return;
-				}
-				if (action === "close") {
-					legacy.multiselect.close(this);
-					return;
-				}
-				if (action === "toggle") {
-					legacy.multiselect.toggle(this);
-					return;
-				}
-				legacy.multiselect.setup(this);
-			});
-		};
-		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.pagination) root.jQuery.fn.pagination = function(action, value) {
-			return this.each(function() {
-				if (action === "goTo" && value !== void 0) {
-					legacy.pagination.goTo(this, value);
-					return;
-				}
-				if (action === "pageSize" && value !== void 0) {
-					legacy.pagination.pageSize(this, value);
-					return;
-				}
-				if (action === "refresh") {
-					legacy.pagination.refresh(this);
-					return;
-				}
-				/* v8 ignore next -- jQuery bridge accepts object options or default setup options */
-				legacy.pagination.setup(this, typeof action === "object" ? action : void 0);
-			});
-		};
+	}
+	//#endregion
+	//#region src/legacy.ts
+	(function() {
+		const root = window;
+		/* v8 ignore next -- alternate startup path is preserving an existing namespace */
+		if (!root.LegacyCss) root.LegacyCss = {};
+		const legacy = root.LegacyCss;
+		installTheme(legacy);
+		installModal(legacy);
+		installToast(legacy);
+		installPopover(legacy);
+		installTabs(legacy);
+		installDragdrop(legacy);
+		installMultiselect(legacy);
+		installPagination(legacy);
+		installJQueryBridges(root, legacy);
 	})();
 	//#endregion
 })();
