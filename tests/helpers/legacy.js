@@ -10,6 +10,7 @@ const globalNames = [
   "window",
   "document",
   "CSS",
+  "Element",
   "HTMLElement",
   "HTMLDialogElement",
   "CustomEvent",
