@@ -24,7 +24,7 @@
 .pagination-page[aria-current="page"] {
   background: var(--legacy-primary);
   border-color: var(--legacy-primary-dark);
-  color: #fff;
+  color: var(--legacy-primary-contrast);
   font-weight: 700;
 }
 

@@ -12,7 +12,10 @@
 }
 
 .tabs-list [role="tab"] {
-  background: linear-gradient(#f6f6f6, #d8d8d8);
+  background: linear-gradient(
+    var(--legacy-button-bg-top),
+    var(--legacy-button-bg-bottom)
+  );
   border: 1px solid var(--legacy-border);
   border-bottom: 0;
   border-radius: var(--legacy-radius) var(--legacy-radius) 0 0;

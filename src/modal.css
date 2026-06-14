@@ -19,7 +19,7 @@ dialog.modal::backdrop {
 
 dialog.modal > header {
   align-items: center;
-  background: #d6e3f0;
+  background: var(--legacy-header-bg);
   border-bottom: 1px solid var(--legacy-border);
   color: var(--legacy-primary-dark);
   display: flex;

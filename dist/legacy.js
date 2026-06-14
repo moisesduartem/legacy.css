@@ -12,6 +12,8 @@
 		"bottom",
 		"left"
 	];
+	var legacyThemes = ["light", "dark"];
+	var legacyThemeStorageKey = "legacy.css.theme";
 	(function() {
 		const root = window;
 		/* v8 ignore next -- alternate startup path is preserving an existing namespace */
@@ -77,6 +79,44 @@
 		function isPopoverPlacement(placement) {
 			return typeof placement === "string" && legacyPopoverPlacements.includes(placement);
 		}
+		function isLegacyTheme(theme) {
+			return typeof theme === "string" && legacyThemes.includes(theme);
+		}
+		function normalizeTheme(theme) {
+			return isLegacyTheme(theme) ? theme : "light";
+		}
+		function getStoredTheme() {
+			try {
+				return window.localStorage.getItem(legacyThemeStorageKey);
+			} catch (error) {
+				return null;
+			}
+		}
+		function storeTheme(theme) {
+			try {
+				window.localStorage.setItem(legacyThemeStorageKey, theme);
+			} catch (error) {
+				return;
+			}
+		}
+		function applyTheme(theme, persist = true) {
+			const nextTheme = normalizeTheme(theme);
+			document.documentElement.dataset.legacyTheme = nextTheme;
+			if (persist) storeTheme(nextTheme);
+			return nextTheme;
+		}
+		legacy.theme = {
+			apply(theme) {
+				return applyTheme(theme || getStoredTheme());
+			},
+			get() {
+				return normalizeTheme(document.documentElement.dataset.legacyTheme || getStoredTheme());
+			},
+			set(theme) {
+				return applyTheme(theme);
+			}
+		};
+		if (isLegacyTheme(getStoredTheme())) applyTheme(getStoredTheme(), false);
 		function resolveDialog(target) {
 			if (!target) return null;
 			if (isLegacyCollection(target)) return resolveDialog(target[0]);
@@ -1286,6 +1326,9 @@
 		};
 		if (root.jQuery && !root.jQuery.toast) root.jQuery.toast = function(message, options) {
 			return legacy.toast.show(message, options);
+		};
+		if (root.jQuery && !root.jQuery.theme) root.jQuery.theme = function(theme) {
+			return theme === void 0 ? legacy.theme.get() : legacy.theme.set(theme);
 		};
 		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.toast) root.jQuery.fn.toast = function(action) {
 			return this.each(function() {

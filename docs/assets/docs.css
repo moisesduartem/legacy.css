@@ -1,5 +1,5 @@
 .docs-heading-row {
-  align-items: center;
+  align-items: start;
   display: flex;
   gap: var(--legacy-space-3);
   justify-content: space-between;
@@ -10,7 +10,15 @@
   margin: 0;
 }
 
-.docs-heading-row select {
+.docs-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--legacy-space-2);
+  justify-content: flex-end;
+}
+
+.docs-controls select {
   margin: 0;
   width: auto;
 }
@@ -24,10 +32,21 @@
 }
 
 main pre {
-  background: #f7f7f7;
+  background: var(--legacy-surface-alt);
   border: 1px solid var(--legacy-border);
   margin: 0;
   overflow: auto;
   padding: var(--legacy-space-3);
   white-space: pre-wrap;
+}
+
+@media (width <= 520px) {
+  .docs-heading-row {
+    display: block;
+  }
+
+  .docs-controls {
+    justify-content: flex-start;
+    margin-top: var(--legacy-space-2);
+  }
 }

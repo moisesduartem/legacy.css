@@ -36,5 +36,5 @@ button:active,
 input[type="button"]:active,
 input[type="reset"]:active,
 input[type="submit"]:active {
-  background: #c8c8c8;
+  background: var(--legacy-button-active-bg);
 }

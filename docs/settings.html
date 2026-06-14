@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>legacy.css - settings</title>
+    <script src="assets/theme.js"></script>
+    <link rel="stylesheet" href="assets/legacy.css">
+    <link rel="stylesheet" href="assets/docs.css">
+    <script src="assets/i18n.config.js" defer></script>
+    <script src="assets/i18n.js" defer></script>
+    <script src="assets/legacy.min.js" defer></script>
+  </head>
+  <body data-i18n-document-title="settings.title">
+    <main>
+      <div class="docs-heading-row">
+        <h1 data-i18n="settings.heading">Settings</h1>
+        <div class="docs-controls">
+          <label class="sr-only" for="theme-select" data-i18n="common.theme">Theme</label>
+          <select id="theme-select" data-theme-select data-i18n-aria-label="common.theme">
+            <option value="light" data-i18n="common.theme.light">Light</option>
+            <option value="dark" data-i18n="common.theme.dark">Dark</option>
+          </select>
+          <label class="sr-only" for="language-select" data-i18n="common.language">Language</label>
+          <select id="language-select" data-language-select data-i18n-aria-label="common.language"></select>
+        </div>
+      </div>
+
+      <div class="sidebar-layout">
+        <aside class="sidebar">
+          <header data-i18n="common.navLabel">Documentation</header>
+          <nav aria-label="Documentation" data-i18n-aria-label="common.navLabel">
+            <a href="index.html" data-i18n="common.nav.home">Getting Started</a>
+            <a href="components.html" data-i18n="common.nav.components">Components</a>
+            <a href="settings.html" aria-current="page" data-i18n="common.nav.settings">Settings</a>
+          </nav>
+        </aside>
+
+        <div class="sidebar-content">
+          <p data-i18n="settings.intro">Configure global behavior for pages that use legacy.css.</p>
+
+          <section class="panel">
+            <header data-i18n="settings.theme.header">Color theme</header>
+            <p data-i18n="settings.theme.body">legacy.css supports a document-level light or dark theme through the `data-legacy-theme` attribute.</p>
+
+            <p data-i18n="settings.theme.default">Light mode is the default and does not require configuration.</p>
+            <pre>&lt;html lang="en"&gt;</pre>
+
+            <p data-i18n="settings.theme.static">For a static dark page, set the theme attribute on the document element.</p>
+            <pre>&lt;html lang="en" data-legacy-theme="dark"&gt;</pre>
+          </section>
+
+          <section class="panel">
+            <header data-i18n="settings.theme.jsHeader">Using JavaScript</header>
+            <p data-i18n="settings.theme.jsBody">When the browser script is loaded, use `LegacyCss.theme` to update the theme and store the preference.</p>
+            <pre>&lt;link rel="stylesheet" href="./node_modules/legacy.css/dist/legacy.css"&gt;
+&lt;script src="./node_modules/legacy.css/dist/legacy.min.js" defer&gt;&lt;/script&gt;</pre>
+
+            <pre>LegacyCss.theme.set("dark");
+LegacyCss.theme.set("light");
+
+const currentTheme = LegacyCss.theme.get();</pre>
+          </section>
+
+          <section class="panel">
+            <header data-i18n="settings.theme.jqueryHeader">Using jQuery</header>
+            <p data-i18n="settings.theme.jqueryBody">If jQuery is present before the browser script runs, legacy.css registers `$.theme()` as a small bridge to the same theme API.</p>
+            <pre>&lt;script src="https://code.jquery.com/jquery-3.7.1.min.js"&gt;&lt;/script&gt;
+&lt;script src="./node_modules/legacy.css/dist/legacy.min.js" defer&gt;&lt;/script&gt;</pre>
+
+            <pre>$.theme("dark");
+$.theme("light");
+
+const currentTheme = $.theme();</pre>
+          </section>
+
+          <section class="panel">
+            <header data-i18n="settings.theme.flashHeader">Avoiding a theme flash</header>
+            <p data-i18n="settings.theme.flashBody">If your application stores the user preference and must avoid a light-to-dark flash, load the browser script before the stylesheet so it can apply the stored theme before CSS paints.</p>
+            <pre>&lt;script src="./node_modules/legacy.css/dist/legacy.min.js"&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="./node_modules/legacy.css/dist/legacy.css"&gt;</pre>
+          </section>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

@@ -11,7 +11,7 @@
 }
 
 .sidebar > header {
-  background: #d6e3f0;
+  background: var(--legacy-header-bg);
   border-bottom: 1px solid var(--legacy-border);
   color: var(--legacy-primary-dark);
   font-weight: 700;
@@ -35,13 +35,13 @@
 }
 
 .sidebar a:hover {
-  background: #e8eef5;
+  background: var(--legacy-header-hover-bg);
   color: var(--legacy-primary-dark);
 }
 
 .sidebar a[aria-current="page"] {
   background: var(--legacy-primary);
-  color: #fff;
+  color: var(--legacy-primary-contrast);
   font-weight: 700;
 }
 

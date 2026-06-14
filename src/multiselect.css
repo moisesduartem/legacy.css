@@ -40,7 +40,7 @@
 }
 
 .multiselect-menu {
-  background: #fff;
+  background: var(--legacy-control-bg);
   border: 1px solid var(--legacy-border-dark);
   box-shadow: 2px 2px 0 rgb(0 0 0 / 18%);
   display: none;
@@ -78,7 +78,7 @@
 }
 
 .multiselect-option::before {
-  background: #fff;
+  background: var(--legacy-control-bg);
   border: 1px solid var(--legacy-border-dark);
   content: "";
   flex: 0 0 auto;
@@ -98,7 +98,7 @@
   background:
     linear-gradient(45deg, transparent 45%, var(--legacy-primary-dark) 45% 58%, transparent 58%),
     linear-gradient(-45deg, transparent 48%, var(--legacy-primary-dark) 48% 62%, transparent 62%),
-    #fff;
+    var(--legacy-control-bg);
 }
 
 .multiselect-option[aria-disabled="true"] {

@@ -14,7 +14,7 @@
 }
 
 .dragdrop-column > header {
-  background: #d6e3f0;
+  background: var(--legacy-header-bg);
   border: 1px solid var(--legacy-border);
   color: var(--legacy-primary-dark);
   font-weight: 700;

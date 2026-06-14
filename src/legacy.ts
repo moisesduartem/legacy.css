@@ -12,6 +12,7 @@ type LegacyRequiredApi = {
 type LegacyFocusableElement = HTMLElement | SVGElement;
 type LegacyPageToken = number | "ellipsis-start" | "ellipsis-end";
 type LegacyPaginationAction = "previous" | "next" | "page";
+type LegacyTheme = "light" | "dark";
 
 interface LegacyDragdropState {
   board: Element;
@@ -38,6 +39,8 @@ type LegacyPopoverPlacement = "top" | "right" | "bottom" | "left";
 
 const legacyToastPositions: LegacyToastPosition[] = ["top-left", "top-right", "bottom-left", "bottom-right"];
 const legacyPopoverPlacements: LegacyPopoverPlacement[] = ["top", "right", "bottom", "left"];
+const legacyThemes: LegacyTheme[] = ["light", "dark"];
+const legacyThemeStorageKey = "legacy.css.theme";
 
 interface LegacyToastOptions {
   closeLabel?: string;
@@ -114,6 +117,11 @@ interface LegacyPaginationPayload {
 }
 
 interface LegacyCssApi {
+  theme?: {
+    apply(theme?: string | null): LegacyTheme;
+    get(): LegacyTheme;
+    set(theme: string): LegacyTheme;
+  };
   dragdrop?: {
     setup(target: LegacyTarget, options?: LegacyDragdropOptions): Element | null;
   };
@@ -165,6 +173,7 @@ interface LegacyJQueryCollection {
 interface LegacyJQuery {
   (target?: unknown): LegacyJQueryCollection;
   fn?: LegacyJQueryCollection;
+  theme?: (theme?: string) => LegacyTheme;
   toast?: (message: LegacyToastInput, options?: LegacyToastOptions) => HTMLElement | null;
 }
 
@@ -256,6 +265,58 @@ interface Window {
 
   function isPopoverPlacement(placement: unknown): placement is LegacyPopoverPlacement {
     return typeof placement === "string" && legacyPopoverPlacements.includes(placement as LegacyPopoverPlacement);
+  }
+
+  function isLegacyTheme(theme: unknown): theme is LegacyTheme {
+    return typeof theme === "string" && legacyThemes.includes(theme as LegacyTheme);
+  }
+
+  function normalizeTheme(theme: unknown): LegacyTheme {
+    return isLegacyTheme(theme) ? theme : "light";
+  }
+
+  function getStoredTheme(): string | null {
+    try {
+      return window.localStorage.getItem(legacyThemeStorageKey);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function storeTheme(theme: LegacyTheme): void {
+    try {
+      window.localStorage.setItem(legacyThemeStorageKey, theme);
+    } catch (error) {
+      return;
+    }
+  }
+
+  function applyTheme(theme?: string | null, persist = true): LegacyTheme {
+    const nextTheme = normalizeTheme(theme);
+
+    document.documentElement.dataset.legacyTheme = nextTheme;
+
+    if (persist) {
+      storeTheme(nextTheme);
+    }
+
+    return nextTheme;
+  }
+
+  legacy.theme = {
+    apply(theme) {
+      return applyTheme(theme || getStoredTheme());
+    },
+    get() {
+      return normalizeTheme(document.documentElement.dataset.legacyTheme || getStoredTheme());
+    },
+    set(theme) {
+      return applyTheme(theme);
+    },
+  };
+
+  if (isLegacyTheme(getStoredTheme())) {
+    applyTheme(getStoredTheme(), false);
   }
 
   function resolveDialog(target: LegacyTarget<HTMLDialogElement>): HTMLDialogElement | null {
@@ -2331,6 +2392,12 @@ interface Window {
   if (root.jQuery && !root.jQuery.toast) {
     root.jQuery.toast = function (message, options) {
       return legacy.toast.show(message, options);
+    };
+  }
+
+  if (root.jQuery && !root.jQuery.theme) {
+    root.jQuery.theme = function (theme) {
+      return theme === undefined ? legacy.theme.get() : legacy.theme.set(theme);
     };
   }
 

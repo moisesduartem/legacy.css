@@ -47,7 +47,7 @@ Or import the source entry point in a bundler:
 @import "legacy.css/src/legacy.css";
 ```
 
-For interactive components such as tabs, popovers, modal dialogs, toast notifications, multiselect controls, and drag/drop boards, include the optional browser script:
+For interactive components such as tabs, popovers, modal dialogs, toast notifications, multiselect controls, and drag/drop boards, include the browser script:
 
 ```html
 <script src="./node_modules/legacy.css/dist/legacy.min.js" defer></script>
@@ -86,6 +86,14 @@ Write semantic HTML and let the stylesheet provide the baseline:
 </main>
 ```
 
+Set a global color theme on the document element when you need a dark interface:
+
+```html
+<html lang="en" data-legacy-theme="dark">
+```
+
+Use `data-legacy-theme="light"` or omit the attribute for the default light theme. With the browser script, use `LegacyCss.theme.set("dark")` or `LegacyCss.theme.set("light")` to update the document theme and store the preference. If jQuery is present before the script runs, use `$.theme("dark")`, `$.theme("light")`, or `$.theme()` to read the current theme.
+
 ## Project Structure
 
 ```text
@@ -118,7 +126,7 @@ docs/
 ```
 
 `src/legacy.css` is the main entry point and imports the other files in order.
-`src/legacy.ts` contains the optional browser behavior for tabs, popovers, modal dialogs, toast notifications, multiselect controls, drag/drop boards, and pagination.
+`src/legacy.ts` contains browser behavior for tabs, popovers, modal dialogs, toast notifications, multiselect controls, drag/drop boards, and pagination.
 
 ## Scripts
 
@@ -196,7 +204,7 @@ and an alert area for validation messages.
 ```text
 Use legacy-css resources and snippets to scaffold an admin dashboard page.
 Keep the HTML semantic, prefer native forms and tables, and include the
-legacy.css stylesheet and optional legacy.min.js script.
+legacy.css stylesheet and legacy.min.js script.
 ```
 
 The MCP server helps agents inspect the available CSS modules, find selectors and custom properties, and reuse semantic snippets for forms, tables, panels, alerts, badges, toasts, popovers, and tabs. For interactive tabs, popovers, modals, toasts, multiselect controls, drag/drop boards, and pagination, include:

@@ -10,7 +10,7 @@
 }
 
 .panel > header {
-  background: #d6e3f0;
+  background: var(--legacy-header-bg);
   border-bottom: 1px solid var(--legacy-border);
   color: var(--legacy-primary-dark);
   font-weight: 700;

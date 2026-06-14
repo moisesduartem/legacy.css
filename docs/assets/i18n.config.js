@@ -6,9 +6,13 @@ window.LegacyCssI18n = {
       label: "English (US)",
       messages: {
         "common.language": "Language",
+        "common.theme": "Theme",
+        "common.theme.light": "Light",
+        "common.theme.dark": "Dark",
         "common.navLabel": "Documentation",
-        "common.nav.home": "Home",
+        "common.nav.home": "Getting Started",
         "common.nav.components": "Components",
+        "common.nav.settings": "Settings",
         "index.title": "legacy.css - getting started",
         "index.heading": "legacy.css",
         "index.intro":
@@ -20,9 +24,11 @@ window.LegacyCssI18n = {
         "index.css.body": "Reference the built stylesheet from your HTML.",
         "index.css.bundler":
           "Or import the source entry point from a bundler.",
-        "index.js.header": "Add optional JavaScript",
+        "index.js.header": "Add the browser script",
         "index.js.body":
-          "Tabs, popovers, modal dialogs, toast notifications, and drag/drop boards use the optional browser script.",
+          "Tabs, popovers, modal dialogs, toast notifications, and drag/drop boards use the browser script.",
+        "index.js.note":
+          "If you are only interested in basic element styling such as buttons, forms, tables, or panels, the JavaScript import may not be needed. Some features may not work properly without it.",
         "index.markup.header": "Write semantic HTML",
         "index.markup.body":
           "Native elements such as forms, tables, buttons, fieldsets, and details receive usable defaults without extra classes.",
@@ -82,15 +88,39 @@ window.LegacyCssI18n = {
         "components.progress.custom": "Export progress",
         "components.progress.customStatus": "38% complete",
         "components.progress.loading": "Synchronizing records",
+        "settings.title": "legacy.css - settings",
+        "settings.heading": "Settings",
+        "settings.intro":
+          "Configure global behavior for pages that use legacy.css.",
+        "settings.theme.header": "Color theme",
+        "settings.theme.body":
+          "legacy.css supports a document-level light or dark theme through the `data-legacy-theme` attribute.",
+        "settings.theme.default":
+          "Light mode is the default and does not require configuration.",
+        "settings.theme.static":
+          "For a static dark page, set the theme attribute on the document element.",
+        "settings.theme.jsHeader": "Using JavaScript",
+        "settings.theme.jsBody":
+          "When the browser script is loaded, use `LegacyCss.theme` to update the theme and store the preference.",
+        "settings.theme.jqueryHeader": "Using jQuery",
+        "settings.theme.jqueryBody":
+          "If jQuery is present before the browser script runs, legacy.css registers `$.theme()` as a small bridge to the same theme API.",
+        "settings.theme.flashHeader": "Avoiding a theme flash",
+        "settings.theme.flashBody":
+          "If your application stores the user preference and must avoid a light-to-dark flash, load the browser script before the stylesheet so it can apply the stored theme before CSS paints.",
       },
     },
     "pt-BR": {
       label: "Português (Brasil)",
       messages: {
         "common.language": "Idioma",
+        "common.theme": "Tema",
+        "common.theme.light": "Claro",
+        "common.theme.dark": "Escuro",
         "common.navLabel": "Documentação",
-        "common.nav.home": "Início",
+        "common.nav.home": "Primeiros passos",
         "common.nav.components": "Componentes",
+        "common.nav.settings": "Configurações",
         "index.title": "legacy.css - primeiros passos",
         "index.heading": "legacy.css",
         "index.intro":
@@ -102,9 +132,11 @@ window.LegacyCssI18n = {
         "index.css.body": "Referencie a folha de estilos compilada no HTML.",
         "index.css.bundler":
           "Ou importe o ponto de entrada dos fontes em um bundler.",
-        "index.js.header": "Adicionar JavaScript opcional",
+        "index.js.header": "Adicionar o script para navegador",
         "index.js.body":
-          "Abas, popovers, modais, notificações toast e quadros de arrastar e soltar usam o script opcional para navegadores.",
+          "Abas, popovers, modais, notificações toast e quadros de arrastar e soltar usam o script para navegador.",
+        "index.js.note":
+          "Se você só precisa da estilização básica de elementos como botões, formulários, tabelas ou painéis, a importação do JavaScript pode não ser necessária. Algumas funcionalidades podem não funcionar corretamente sem ela.",
         "index.markup.header": "Escrever HTML semântico",
         "index.markup.body":
           "Elementos nativos como formulários, tabelas, botões, fieldsets e details recebem padrões utilizáveis sem classes extras.",
@@ -164,6 +196,26 @@ window.LegacyCssI18n = {
         "components.progress.custom": "Progresso da exportação",
         "components.progress.customStatus": "38% concluído",
         "components.progress.loading": "Sincronizando registros",
+        "settings.title": "legacy.css - configurações",
+        "settings.heading": "Configurações",
+        "settings.intro":
+          "Configure comportamentos globais para páginas que usam legacy.css.",
+        "settings.theme.header": "Tema de cores",
+        "settings.theme.body":
+          "legacy.css oferece tema claro ou escuro no documento por meio do atributo `data-legacy-theme`.",
+        "settings.theme.default":
+          "O modo claro é o padrão e não requer configuração.",
+        "settings.theme.static":
+          "Para uma página escura estática, defina o atributo de tema no elemento do documento.",
+        "settings.theme.jsHeader": "Usando JavaScript",
+        "settings.theme.jsBody":
+          "Quando o script para navegador estiver carregado, use `LegacyCss.theme` para atualizar o tema e armazenar a preferência.",
+        "settings.theme.jqueryHeader": "Usando jQuery",
+        "settings.theme.jqueryBody":
+          "Se o jQuery estiver presente antes do script para navegador ser executado, legacy.css registra `$.theme()` como uma pequena ponte para a mesma API de tema.",
+        "settings.theme.flashHeader": "Evitando flash de tema",
+        "settings.theme.flashBody":
+          "Se a aplicação armazena a preferência do usuário e precisa evitar um flash de claro para escuro, carregue o script para navegador antes da folha de estilos para que ele aplique o tema armazenado antes que o CSS renderize.",
       },
     },
   },

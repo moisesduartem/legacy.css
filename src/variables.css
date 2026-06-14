@@ -7,6 +7,7 @@
   --legacy-page-bg: #d9d9d9;
   --legacy-surface: #f4f4f4;
   --legacy-surface-raised: #fff;
+  --legacy-surface-alt: #f7f7f7;
   --legacy-border: #9a9a9a;
   --legacy-border-dark: #666;
   --legacy-text: #1f1f1f;
@@ -15,6 +16,9 @@
   --legacy-link-visited: #551a8b;
   --legacy-primary: #0b4f8a;
   --legacy-primary-dark: #07355d;
+  --legacy-primary-contrast: #fff;
+  --legacy-header-bg: #d6e3f0;
+  --legacy-header-hover-bg: #e8eef5;
   --legacy-focus: #f4c430;
   --legacy-danger-bg: #f8d7da;
   --legacy-danger-border: #b94a48;
@@ -25,9 +29,11 @@
   --legacy-info-bg: #d9edf7;
   --legacy-info-border: #3a87ad;
   --legacy-radius: 2px;
+  --legacy-control-bg: #fff;
   --legacy-button-bg-top: #fdfdfd;
   --legacy-button-bg-bottom: #d5d5d5;
   --legacy-button-hover-bottom: #c6d3df;
+  --legacy-button-active-bg: #c8c8c8;
   --legacy-button-border: #7f7f7f;
   --legacy-space-1: 0.25rem;
   --legacy-space-2: 0.5rem;
@@ -35,4 +41,43 @@
   --legacy-space-4: 1rem;
   --legacy-space-6: 1.5rem;
   --legacy-line-height: 1.45;
+}
+
+[data-legacy-theme="light"] {
+  color-scheme: light;
+}
+
+[data-legacy-theme="dark"] {
+  color-scheme: dark;
+
+  --legacy-page-bg: #151515;
+  --legacy-surface: #242424;
+  --legacy-surface-raised: #303030;
+  --legacy-surface-alt: #262626;
+  --legacy-border: #696969;
+  --legacy-border-dark: #8a8a8a;
+  --legacy-text: #efefef;
+  --legacy-muted: #b8b8b8;
+  --legacy-link: #8ab4f8;
+  --legacy-link-visited: #c7a8ff;
+  --legacy-primary: #5f8fbd;
+  --legacy-primary-dark: #b7d6f2;
+  --legacy-primary-contrast: #101010;
+  --legacy-header-bg: #21384b;
+  --legacy-header-hover-bg: #2d4559;
+  --legacy-focus: #f4c430;
+  --legacy-danger-bg: #4a2327;
+  --legacy-danger-border: #d78387;
+  --legacy-warning-bg: #4a3b15;
+  --legacy-warning-border: #e1bd4c;
+  --legacy-success-bg: #233f28;
+  --legacy-success-border: #82ba7c;
+  --legacy-info-bg: #203c4a;
+  --legacy-info-border: #82b9d0;
+  --legacy-control-bg: #1f1f1f;
+  --legacy-button-bg-top: #424242;
+  --legacy-button-bg-bottom: #2b2b2b;
+  --legacy-button-hover-bottom: #38495a;
+  --legacy-button-active-bg: #1f1f1f;
+  --legacy-button-border: #8a8a8a;
 }

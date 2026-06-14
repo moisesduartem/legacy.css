@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>legacy.css - components</title>
+    <script src="assets/theme.js"></script>
     <link rel="stylesheet" href="assets/legacy.css">
     <link rel="stylesheet" href="assets/docs.css">
     <script src="assets/i18n.config.js" defer></script>
@@ -15,15 +16,24 @@
     <main>
       <div class="docs-heading-row">
         <h1 data-i18n="components.heading">Minimal components</h1>
-        <select id="language-select" data-language-select data-i18n-aria-label="common.language"></select>
+        <div class="docs-controls">
+          <label class="sr-only" for="theme-select" data-i18n="common.theme">Theme</label>
+          <select id="theme-select" data-theme-select data-i18n-aria-label="common.theme">
+            <option value="light" data-i18n="common.theme.light">Light</option>
+            <option value="dark" data-i18n="common.theme.dark">Dark</option>
+          </select>
+          <label class="sr-only" for="language-select" data-i18n="common.language">Language</label>
+          <select id="language-select" data-language-select data-i18n-aria-label="common.language"></select>
+        </div>
       </div>
 
       <div class="sidebar-layout">
         <aside class="sidebar">
           <header data-i18n="common.navLabel">Documentation</header>
           <nav aria-label="Documentation" data-i18n-aria-label="common.navLabel">
-            <a href="index.html" data-i18n="common.nav.home">Home</a>
+            <a href="index.html" data-i18n="common.nav.home">Getting Started</a>
             <a href="components.html" aria-current="page" data-i18n="common.nav.components">Components</a>
+            <a href="settings.html" data-i18n="common.nav.settings">Settings</a>
             <div class="sidebar-section">
               <a href="#alerts">Alerts</a>
               <a href="#toast-notifications">Toast notifications</a>
@@ -88,7 +98,7 @@
 
       <section class="panel docs-example" id="toast-notifications">
         <header>Toast notifications</header>
-        <p>Toast notifications can be created with the optional browser script and dismissed automatically or by the user.</p>
+        <p>Toast notifications can be created with the browser script and dismissed automatically or by the user.</p>
         <div class="tabs" data-tabs>
           <div class="tabs-list" role="tablist" aria-label="Toast example">
             <button type="button" role="tab" id="toast-implementation-tab" aria-selected="true" aria-controls="toast-implementation">Implementation</button>
@@ -899,7 +909,7 @@
 
       <section class="panel docs-example" id="modal-dialog">
         <header>Modal dialog</header>
-        <p>The dialog below is opened by both the vanilla JavaScript API and the optional jQuery bridge.</p>
+        <p>The dialog below is opened by both the vanilla JavaScript API and the jQuery bridge.</p>
         <div class="tabs" data-tabs>
           <div class="tabs-list" role="tablist" aria-label="Modal example">
             <button type="button" role="tab" id="modal-implementation-tab" aria-selected="true" aria-controls="modal-implementation">Implementation</button>

@@ -12,7 +12,7 @@ fieldset {
 legend {
   background: var(--legacy-primary);
   border: 1px solid var(--legacy-primary-dark);
-  color: #fff;
+  color: var(--legacy-primary-contrast);
   font-weight: 700;
   padding: var(--legacy-space-1) var(--legacy-space-2);
 }
@@ -26,7 +26,7 @@ label {
 input,
 select,
 textarea {
-  background: #fff;
+  background: var(--legacy-control-bg);
   border: 1px solid var(--legacy-border-dark);
   border-radius: var(--legacy-radius);
   color: var(--legacy-text);

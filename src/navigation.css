@@ -7,7 +7,7 @@ nav {
 
 nav a,
 nav a:visited {
-  color: #fff;
+  color: var(--legacy-primary-contrast);
   display: inline-block;
   font-weight: 700;
   margin-right: var(--legacy-space-3);

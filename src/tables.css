@@ -22,10 +22,10 @@ td {
 }
 
 th {
-  background: #d6e3f0;
+  background: var(--legacy-header-bg);
   color: var(--legacy-primary-dark);
 }
 
 tbody tr:nth-child(even) {
-  background: #f7f7f7;
+  background: var(--legacy-surface-alt);
 }

@@ -16,12 +16,12 @@
 }
 
 .popover > header {
+  background: var(--legacy-header-bg);
   border-bottom: 1px solid var(--legacy-border);
   color: var(--legacy-primary-dark);
   font-weight: 700;
   margin: calc(var(--legacy-space-3) * -1) calc(var(--legacy-space-3) * -1) var(--legacy-space-2);
   padding: var(--legacy-space-2) var(--legacy-space-3);
-  background: #d6e3f0;
 }
 
 .popover > :last-child {
