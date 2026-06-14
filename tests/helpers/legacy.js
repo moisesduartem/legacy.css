@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { JSDOM } from "jsdom";
 
-const legacyPath = resolve("src/legacy.js");
+const legacyPath = resolve("src/legacy.ts");
 const legacyUrl = pathToFileURL(legacyPath).href;
 let importId = 0;
 

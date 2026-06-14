@@ -1,2066 +1,1297 @@
-(function () {
-  const root = window;
-  const legacy = root.LegacyCss || (root.LegacyCss = {});
-  const openDialogs = [];
-  const openerMap = new WeakMap();
-  const fallbackDialogs = new WeakSet();
-  const wiredDialogs = new WeakSet();
-  const wiredTabs = new WeakSet();
-  const wiredPopoverTriggers = new WeakSet();
-  const wiredDragdropBoards = new WeakSet();
-  const wiredMultiselects = new WeakSet();
-  const wiredPaginations = new WeakSet();
-  const multiselectMap = new WeakMap();
-  const dragdropOptions = new WeakMap();
-  const paginationOptions = new WeakMap();
-  const paginationState = new WeakMap();
-  const toastTimers = new WeakMap();
-  const supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
-  const dragdropBoardSelector = "[data-dragdrop], .dragdrop";
-  const dragdropColumnSelector = "[data-dragdrop-column], .dragdrop-column";
-  const dragdropItemSelector = "[data-dragdrop-item], .dragdrop-item";
-  const multiselectSelector = 'select[multiple][data-multiselect], select[multiple].multiselect-source';
-  const paginationSelector = "[data-pagination], .pagination";
-  const popoverTriggerSelector = "[data-popover-target], [data-popover]";
-
-  let scrollLockCount = 0;
-  let previousBodyOverflow = "";
-  let previousHtmlOverflow = "";
-  let dragdropState = null;
-  let multiselectId = 0;
-  let openPopoverTrigger = null;
-
-  const focusableSelector = [
-    'a[href]',
-    'button:not([disabled])',
-    'input:not([disabled])',
-    'select:not([disabled])',
-    'textarea:not([disabled])',
-    '[tabindex]:not([tabindex="-1"])',
-  ].join(", ");
-
-  function resolveDialog(target) {
-    if (!target) {
-      return null;
-    }
-
-    if (target.jquery) {
-      return resolveDialog(target[0]);
-    }
-
-    if (typeof target === "string") {
-      return document.querySelector(target);
-    }
-
-    if (typeof HTMLDialogElement !== "undefined" && target instanceof HTMLDialogElement) {
-      return target;
-    }
-
-    if (target.nodeType === 1 && target.nodeName === "DIALOG") {
-      return target;
-    }
-
-    return null;
-  }
-
-  function getFocusableElement(dialog) {
-    return dialog.querySelector("[autofocus], [data-modal-autofocus], " + focusableSelector);
-  }
-
-  function focusDialog(dialog) {
-    const focusTarget = getFocusableElement(dialog);
-
-    if (focusTarget) {
-      try {
-        focusTarget.focus({ preventScroll: true });
-      } catch (error) {
-        focusTarget.focus();
-      }
-      return;
-    }
-
-    if (!dialog.hasAttribute("tabindex")) {
-      dialog.setAttribute("tabindex", "-1");
-    }
-
-    try {
-      dialog.focus({ preventScroll: true });
-    } catch (error) {
-      dialog.focus();
-    }
-  }
-
-  function lockScroll() {
-    if (scrollLockCount > 0) {
-      scrollLockCount += 1;
-      return;
-    }
-
-    previousBodyOverflow = document.body.style.overflow;
-    previousHtmlOverflow = document.documentElement.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-    scrollLockCount = 1;
-  }
-
-  function unlockScroll() {
-    if (scrollLockCount === 0) {
-      return;
-    }
-
-    scrollLockCount -= 1;
-
-    if (scrollLockCount > 0) {
-      return;
-    }
-
-    document.body.style.overflow = previousBodyOverflow;
-    document.documentElement.style.overflow = previousHtmlOverflow;
-  }
-
-  function removeFromOpenDialogs(dialog) {
-    const index = openDialogs.indexOf(dialog);
-
-    if (index >= 0) {
-      openDialogs.splice(index, 1);
-    }
-  }
-
-  function restoreFocus(dialog) {
-    const opener = openerMap.get(dialog);
-
-    if (opener && typeof opener.focus === "function" && document.contains(opener)) {
-      try {
-        opener.focus({ preventScroll: true });
-      } catch (error) {
-        opener.focus();
-      }
-    }
-
-    openerMap.delete(dialog);
-  }
-
-  function handleClose(event) {
-    const dialog = event.currentTarget;
-
-    removeFromOpenDialogs(dialog);
-    dialog.removeAttribute("aria-modal");
-    restoreFocus(dialog);
-
-    if (fallbackDialogs.has(dialog)) {
-      fallbackDialogs.delete(dialog);
-      unlockScroll();
-
-      if (scrollLockCount === 0) {
-        document.removeEventListener("keydown", handleKeydown);
-      }
-    }
-  }
-
-  function closeDialogElement(dialog, returnValue = "") {
-    if (!dialog) {
-      return null;
-    }
-
-    if (!dialog.open) {
-      return dialog;
-    }
-
-    if (typeof dialog.close === "function") {
-      dialog.close(returnValue);
-    } else {
-      dialog.removeAttribute("open");
-      handleClose({ currentTarget: dialog });
-    }
-
-    return dialog;
-  }
-
-  function handleBackdropClick(event) {
-    const dialog = event.currentTarget;
-    const target = event.target;
-
-    if (target === dialog) {
-      closeDialogElement(dialog);
-      return;
-    }
-
-    if (target.closest && target.closest("[data-modal-close]")) {
-      closeDialogElement(dialog);
-    }
-  }
-
-  function handleKeydown(event) {
-    if (event.key !== "Escape") {
-      return;
-    }
-
-    const dialog = openDialogs[openDialogs.length - 1];
-
-    if (!dialog || !fallbackDialogs.has(dialog)) {
-      return;
-    }
-
-    event.preventDefault();
-    closeDialogElement(dialog);
-  }
-
-  function wireDialog(dialog) {
-    if (wiredDialogs.has(dialog)) {
-      return;
-    }
-
-    wiredDialogs.add(dialog);
-    dialog.addEventListener("close", handleClose);
-    dialog.addEventListener("click", handleBackdropClick);
-  }
-
-  function openDialogElement(dialog) {
-    if (!dialog) {
-      return null;
-    }
-
-    wireDialog(dialog);
-
-    if (dialog.open) {
-      return dialog;
-    }
-
-    openerMap.set(dialog, document.activeElement instanceof HTMLElement ? document.activeElement : null);
-    dialog.setAttribute("aria-modal", "true");
-
-    try {
-      if (dialog.isConnected && supportsNativeDialog(dialog)) {
-        dialog.showModal();
-      } else {
-        throw new Error("dialog.showModal is unavailable");
-      }
-    } catch (error) {
-      dialog.setAttribute("open", "");
-      fallbackDialogs.add(dialog);
-      lockScroll();
-    }
-
-    if (!openDialogs.includes(dialog)) {
-      openDialogs.push(dialog);
-    }
-
-    focusDialog(dialog);
-
-    if (fallbackDialogs.has(dialog)) {
-      document.addEventListener("keydown", handleKeydown);
-    }
-
-    return dialog;
-  }
-
-  function toggleDialogElement(dialog) {
-    if (!dialog) {
-      return null;
-    }
-
-    return dialog.open ? closeDialogElement(dialog) : openDialogElement(dialog);
-  }
-
-  legacy.modal = {
-    open(target) {
-      return openDialogElement(resolveDialog(target));
-    },
-    close(target, returnValue) {
-      return closeDialogElement(resolveDialog(target), returnValue);
-    },
-    toggle(target) {
-      return toggleDialogElement(resolveDialog(target));
-    },
-  };
-
-  function resolveToast(target) {
-    if (!target) {
-      return null;
-    }
-
-    if (target.jquery) {
-      return resolveToast(target[0]);
-    }
-
-    if (typeof target === "string") {
-      return document.querySelector(target);
-    }
-
-    if (target.nodeType === 1 && target.matches(".toast, [data-toast]")) {
-      return target;
-    }
-
-    return null;
-  }
-
-  function normalizeToastPosition(position) {
-    return ["top-left", "top-right", "bottom-left", "bottom-right"].includes(
-      position
-    )
-      ? position
-      : "bottom-right";
-  }
-
-  function getToastRegion(position) {
-    const normalizedPosition = normalizeToastPosition(position);
-    let region = document.querySelector(
-      '[data-toast-region][data-position="' +
-        normalizedPosition +
-        '"], .toast-region[data-position="' +
-        normalizedPosition +
-        '"]'
-    );
-
-    if (region) {
-      return region;
-    }
-
-    region = document.createElement("div");
-    region.className = "toast-region";
-    region.dataset.position = normalizedPosition;
-    region.dataset.toastRegion = "";
-    region.setAttribute("aria-live", "polite");
-    region.setAttribute("aria-atomic", "false");
-    document.body.append(region);
-
-    return region;
-  }
-
-  function normalizeToastOptions(message, options) {
-    if (message && typeof message === "object" && !message.nodeType && !message.jquery) {
-      return Object.assign({}, message);
-    }
-
-    return Object.assign({}, options, {
-      message: message && message.jquery ? message[0] : message,
-    });
-  }
-
-  function resolveToastContainer(target) {
-    if (!target) {
-      return null;
-    }
-
-    if (target.jquery) {
-      return resolveToastContainer(target[0]);
-    }
-
-    if (typeof target === "string") {
-      return document.querySelector(target);
-    }
-
-    if (target.nodeType === 1) {
-      return target;
-    }
-
-    return null;
-  }
-
-  function setToastContent(toast, options) {
-    const body = document.createElement("div");
-    body.className = "toast-body";
-
-    if (options.title) {
-      const title = document.createElement("strong");
-      title.className = "toast-title";
-      title.textContent = options.title;
-      body.append(title);
-    }
-
-    if (options.message && options.message.nodeType) {
-      body.append(options.message);
-    } else {
-      const message = document.createElement("span");
-      message.textContent = options.message || "";
-      body.append(message);
-    }
-
-    toast.append(body);
-  }
-
-  function closeToastElement(toast) {
-    if (!toast) {
-      return null;
-    }
-
-    const timer = toastTimers.get(toast);
-
-    if (timer) {
-      window.clearTimeout(timer);
-      toastTimers.delete(toast);
-    }
-
-    toast.dispatchEvent(new CustomEvent("toast:close", { bubbles: true }));
-    toast.remove();
-
-    return toast;
-  }
-
-  function showToast(message, options) {
-    const nextOptions = normalizeToastOptions(message, options);
-    const type = ["info", "success", "warning", "danger", "muted"].includes(
-      nextOptions.type
-    )
-      ? nextOptions.type
-      : "info";
-    const region = nextOptions.container
-      ? resolveToastContainer(nextOptions.container)
-      : getToastRegion(nextOptions.position);
-    const toast = document.createElement("section");
-    const duration =
-      typeof nextOptions.duration === "number" ? nextOptions.duration : 5000;
-
-    if (!region) {
-      return null;
-    }
-
-    toast.className = "toast";
-    toast.dataset.toast = "";
-    toast.setAttribute("role", type === "danger" ? "alert" : "status");
-
-    if (type !== "info") {
-      toast.classList.add("toast-" + type);
-    }
-
-    setToastContent(toast, nextOptions);
-
-    if (nextOptions.dismissible !== false) {
-      const closeButton = document.createElement("button");
-      closeButton.type = "button";
-      closeButton.className = "toast-close";
-      closeButton.setAttribute(
-        "aria-label",
-        nextOptions.closeLabel || "Close notification"
-      );
-      closeButton.textContent = nextOptions.closeText || "Close";
-      closeButton.addEventListener("click", function () {
-        closeToastElement(toast);
-      });
-      toast.append(closeButton);
-    }
-
-    region.append(toast);
-    toast.dispatchEvent(new CustomEvent("toast:show", { bubbles: true }));
-
-    if (duration > 0) {
-      toastTimers.set(
-        toast,
-        window.setTimeout(function () {
-          closeToastElement(toast);
-        }, duration)
-      );
-    }
-
-    return toast;
-  }
-
-  function clearToasts(target) {
-    const rootElement = target
-      ? resolveToastContainer(target)
-      : document;
-    const toasts = rootElement
-      ? Array.from(rootElement.querySelectorAll(".toast, [data-toast]"))
-      : [];
-
-    toasts.forEach(closeToastElement);
-
-    return toasts;
-  }
-
-  legacy.toast = {
-    show(message, options) {
-      return showToast(message, options);
-    },
-    close(target) {
-      return closeToastElement(resolveToast(target));
-    },
-    clear(target) {
-      return clearToasts(target);
-    },
-  };
-
-  function resolveElement(target) {
-    if (!target) {
-      return null;
-    }
-
-    if (target.jquery) {
-      return resolveElement(target[0]);
-    }
-
-    if (typeof target === "string") {
-      return document.querySelector(target);
-    }
-
-    return target.nodeType === 1 ? target : null;
-  }
-
-  function resolvePopoverTrigger(target) {
-    const element = resolveElement(target);
-
-    if (!element) {
-      return null;
-    }
-
-    if (element.matches(popoverTriggerSelector)) {
-      return element;
-    }
-
-    return element.closest(popoverTriggerSelector);
-  }
-
-  function resolvePopover(target) {
-    const element = resolveElement(target);
-
-    if (!element) {
-      return null;
-    }
-
-    if (element.matches(".popover, [data-popover-content]")) {
-      return element;
-    }
-
-    const trigger = resolvePopoverTrigger(element);
-
-    return trigger ? getTriggerPopover(trigger) : null;
-  }
-
-  function getTriggerPopover(trigger) {
-    const target =
-      trigger.getAttribute("data-popover-target") ||
-      trigger.getAttribute("data-popover") ||
-      trigger.getAttribute("aria-controls");
-
-    if (!target) {
-      return null;
-    }
-
-    if (target.charAt(0) === "#") {
-      return document.querySelector(target);
-    }
-
-    return document.getElementById(target);
-  }
-
-  function getPopoverPlacement(trigger) {
-    const placement = trigger.getAttribute("data-popover-placement");
-
-    return ["top", "right", "bottom", "left"].includes(placement)
-      ? placement
-      : "bottom";
-  }
-
-  function positionPopover(trigger, popover) {
-    const gap = 4;
-    const margin = 8;
-    const placement = getPopoverPlacement(trigger);
-    const triggerRect = trigger.getBoundingClientRect();
-    const popoverRect = popover.getBoundingClientRect();
-    let top = triggerRect.bottom + gap;
-    let left = triggerRect.left;
-
-    if (placement === "top") {
-      top = triggerRect.top - popoverRect.height - gap;
-      left = triggerRect.left;
-    } else if (placement === "right") {
-      top = triggerRect.top;
-      left = triggerRect.right + gap;
-    } else if (placement === "left") {
-      top = triggerRect.top;
-      left = triggerRect.left - popoverRect.width - gap;
-    }
-
-    top = Math.max(
-      margin,
-      Math.min(top, window.innerHeight - popoverRect.height - margin)
-    );
-    left = Math.max(
-      margin,
-      Math.min(left, window.innerWidth - popoverRect.width - margin)
-    );
-
-    popover.style.top = top + "px";
-    popover.style.left = left + "px";
-  }
-
-  function closePopover(trigger) {
-    const currentTrigger = trigger || openPopoverTrigger;
-    const popover = currentTrigger ? getTriggerPopover(currentTrigger) : null;
-
-    if (!currentTrigger || !popover) {
-      return null;
-    }
-
-    popover.hidden = true;
-    currentTrigger.setAttribute("aria-expanded", "false");
-
-    if (openPopoverTrigger === currentTrigger) {
-      openPopoverTrigger = null;
-    }
-
-    return popover;
-  }
-
-  function openPopover(trigger) {
-    const popover = trigger ? getTriggerPopover(trigger) : null;
-
-    if (!trigger || !popover) {
-      return null;
-    }
-
-    if (openPopoverTrigger && openPopoverTrigger !== trigger) {
-      closePopover(openPopoverTrigger);
-    }
-
-    wirePopoverTrigger(trigger);
-    popover.hidden = false;
-    trigger.setAttribute("aria-expanded", "true");
-    openPopoverTrigger = trigger;
-    positionPopover(trigger, popover);
-
-    return popover;
-  }
-
-  function togglePopover(trigger) {
-    const popover = trigger ? getTriggerPopover(trigger) : null;
-
-    if (!popover) {
-      return null;
-    }
-
-    return popover.hidden ? openPopover(trigger) : closePopover(trigger);
-  }
-
-  function handlePopoverClick(event) {
-    event.preventDefault();
-    togglePopover(event.currentTarget);
-  }
-
-  function handlePopoverKeydown(event) {
-    if (event.key !== "Escape") {
-      return;
-    }
-
-    const trigger = event.currentTarget;
-    const popover = getTriggerPopover(trigger);
-
-    if (!popover || popover.hidden) {
-      return;
-    }
-
-    event.preventDefault();
-    closePopover(trigger);
-    trigger.focus();
-  }
-
-  function handleDocumentPopoverClick(event) {
-    if (!openPopoverTrigger) {
-      return;
-    }
-
-    const popover = getTriggerPopover(openPopoverTrigger);
-
-    if (
-      openPopoverTrigger.contains(event.target) ||
-      (popover && popover.contains(event.target))
-    ) {
-      return;
-    }
-
-    closePopover(openPopoverTrigger);
-  }
-
-  function handleDocumentPopoverKeydown(event) {
-    if (event.key !== "Escape" || !openPopoverTrigger) {
-      return;
-    }
-
-    event.preventDefault();
-    closePopover(openPopoverTrigger);
-  }
-
-  function updateOpenPopoverPosition() {
-    if (!openPopoverTrigger) {
-      return;
-    }
-
-    const popover = getTriggerPopover(openPopoverTrigger);
-
-    if (popover && !popover.hidden) {
-      positionPopover(openPopoverTrigger, popover);
-    }
-  }
-
-  function wirePopoverTrigger(trigger) {
-    const popover = getTriggerPopover(trigger);
-
-    if (!popover) {
-      return trigger;
-    }
-
-    if (!popover.id && trigger.getAttribute("data-popover-target")) {
-      popover.id = trigger.getAttribute("data-popover-target").replace(/^#/, "");
-    }
-
-    trigger.setAttribute("aria-haspopup", "dialog");
-    trigger.setAttribute("aria-expanded", popover.hidden ? "false" : "true");
-
-    if (popover.id) {
-      trigger.setAttribute("aria-controls", popover.id);
-    }
-
-    if (!popover.hasAttribute("role")) {
-      popover.setAttribute("role", "dialog");
-    }
-
-    if (!wiredPopoverTriggers.has(trigger)) {
-      wiredPopoverTriggers.add(trigger);
-      trigger.addEventListener("click", handlePopoverClick);
-      trigger.addEventListener("keydown", handlePopoverKeydown);
-    }
-
-    return trigger;
-  }
-
-  function setupPopover(target) {
-    const trigger = resolvePopoverTrigger(target);
-
-    return trigger ? wirePopoverTrigger(trigger) : null;
-  }
-
-  legacy.popover = {
-    setup(target) {
-      return setupPopover(target);
-    },
-    open(target) {
-      return openPopover(resolvePopoverTrigger(target));
-    },
-    close(target) {
-      const trigger = resolvePopoverTrigger(target);
-
-      if (trigger) {
-        return closePopover(trigger);
-      }
-
-      const popover = resolvePopover(target);
-
-      return popover && openPopoverTrigger && getTriggerPopover(openPopoverTrigger) === popover
-        ? closePopover(openPopoverTrigger)
-        : popover;
-    },
-    toggle(target) {
-      return togglePopover(resolvePopoverTrigger(target));
-    },
-  };
-
-  function resolveTabs(target) {
-    if (!target) {
-      return null;
-    }
-
-    if (target.jquery) {
-      return resolveTabs(target[0]);
-    }
-
-    if (typeof target === "string") {
-      return document.querySelector(target);
-    }
-
-    if (target.nodeType === 1) {
-      if (target.matches("[data-tabs], .tabs")) {
-        return target;
-      }
-
-      return target.closest("[data-tabs], .tabs");
-    }
-
-    return null;
-  }
-
-  function getTabs(rootElement) {
-    const tabList = Array.from(rootElement.children).find((element) =>
-      element.matches('[role="tablist"], .tabs-list')
-    );
-
-    if (!tabList) {
-      return [];
-    }
-
-    return Array.from(tabList.children).filter((element) =>
-      element.matches('[role="tab"]')
-    );
-  }
-
-  function getTabPanels(rootElement) {
-    return Array.from(rootElement.children).filter((element) =>
-      element.matches('[role="tabpanel"]')
-    );
-  }
-
-  function getTabPanel(rootElement, tab) {
-    const panelId = tab.getAttribute("aria-controls");
-
-    if (!panelId) {
-      return null;
-    }
-
-    try {
-      return rootElement.querySelector("#" + CSS.escape(panelId));
-    } catch (error) {
-      return document.getElementById(panelId);
-    }
-  }
-
-  function selectTab(tab, setFocus) {
-    const rootElement = resolveTabs(tab);
-
-    if (!rootElement || !tab) {
-      return null;
-    }
-
-    getTabs(rootElement).forEach((currentTab) => {
-      const selected = currentTab === tab;
-      const panel = getTabPanel(rootElement, currentTab);
-
-      currentTab.setAttribute("aria-selected", selected ? "true" : "false");
-      currentTab.setAttribute("tabindex", selected ? "0" : "-1");
-
-      if (panel) {
-        panel.hidden = !selected;
-      }
-    });
-
-    if (setFocus) {
-      tab.focus();
-    }
-
-    return tab;
-  }
-
-  function selectTabByIndex(rootElement, index, setFocus) {
-    const tabs = getTabs(rootElement);
-    const tab = tabs[index];
-
-    if (!tab) {
-      return null;
-    }
-
-    return selectTab(tab, setFocus);
-  }
-
-  function handleTabClick(event) {
-    const tab = event.target.closest('[role="tab"]');
-
-    if (tab) {
-      selectTab(tab, false);
-    }
-  }
-
-  function handleTabKeydown(event) {
-    const rootElement = resolveTabs(event.currentTarget);
-    const tabs = getTabs(rootElement);
-    const currentIndex = tabs.indexOf(event.target);
-
-    if (currentIndex < 0) {
-      return;
-    }
-
-    let nextIndex = currentIndex;
-
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      nextIndex = (currentIndex + 1) % tabs.length;
-    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-    } else if (event.key === "Home") {
-      nextIndex = 0;
-    } else if (event.key === "End") {
-      nextIndex = tabs.length - 1;
-    } else {
-      return;
-    }
-
-    event.preventDefault();
-    selectTabByIndex(rootElement, nextIndex, true);
-  }
-
-  function setupTabs(target) {
-    const rootElement = resolveTabs(target);
-
-    if (!rootElement || wiredTabs.has(rootElement)) {
-      return rootElement;
-    }
-
-    wiredTabs.add(rootElement);
-    rootElement.addEventListener("click", handleTabClick);
-    rootElement.addEventListener("keydown", handleTabKeydown);
-
-    const tabs = getTabs(rootElement);
-    const selectedTab =
-      tabs.find((tab) => tab.getAttribute("aria-selected") === "true") ||
-      tabs[0];
-
-    getTabPanels(rootElement).forEach((panel) => {
-      if (!panel.hasAttribute("tabindex")) {
-        panel.setAttribute("tabindex", "0");
-      }
-    });
-
-    if (selectedTab) {
-      selectTab(selectedTab, false);
-    }
-
-    return rootElement;
-  }
-
-  legacy.tabs = {
-    setup(target) {
-      return setupTabs(target);
-    },
-    select(target, index) {
-      const rootElement = resolveTabs(target);
-
-      if (!rootElement) {
-        return null;
-      }
-
-      if (typeof index === "number") {
-        return selectTabByIndex(rootElement, index, false);
-      }
-
-      return selectTab(rootElement.querySelector(index), false);
-    },
-  };
-
-  function resolveDragdropBoard(target) {
-    if (!target) {
-      return null;
-    }
-
-    if (target.jquery) {
-      return resolveDragdropBoard(target[0]);
-    }
-
-    if (typeof target === "string") {
-      return document.querySelector(target);
-    }
-
-    if (target.nodeType === 1) {
-      if (target.matches(dragdropBoardSelector)) {
-        return target;
-      }
-
-      return target.closest(dragdropBoardSelector);
-    }
-
-    return null;
-  }
-
-  function getDragdropItems(column) {
-    return Array.from(column.querySelectorAll(dragdropItemSelector)).filter(
-      (item) => item.closest(dragdropColumnSelector) === column
-    );
-  }
-
-  function getDragdropColumnId(column) {
-    return column.getAttribute("data-column") || column.id || null;
-  }
-
-  function getDragdropIndex(item, column) {
-    return getDragdropItems(column).indexOf(item);
-  }
-
-  function getDragdropInsertBefore(column, clientY) {
-    return getDragdropItems(column)
-      .filter((item) => !item.classList.contains("is-dragging"))
-      .reduce(
-        (closest, item) => {
-          const rect = item.getBoundingClientRect();
-          const offset = clientY - rect.top - rect.height / 2;
-
-          if (offset < 0 && offset > closest.offset) {
-            return { offset, item };
-          }
-
-          return closest;
-        },
-        { offset: Number.NEGATIVE_INFINITY, item: null }
-      ).item;
-  }
-
-  function createDragdropPayload(originalEvent, toColumn) {
-    if (!dragdropState) {
-      return null;
-    }
-
-    const destinationColumn = toColumn || dragdropState.item.closest(dragdropColumnSelector);
-
-    return {
-      board: dragdropState.board,
-      item: dragdropState.item,
-      fromColumn: dragdropState.fromColumn,
-      toColumn: destinationColumn,
-      fromColumnId: getDragdropColumnId(dragdropState.fromColumn),
-      toColumnId: destinationColumn ? getDragdropColumnId(destinationColumn) : null,
-      fromIndex: dragdropState.fromIndex,
-      toIndex: destinationColumn ? getDragdropIndex(dragdropState.item, destinationColumn) : -1,
-      originalEvent,
-    };
-  }
-
-  function callDragdropCallback(board, name, payload) {
-    const options = dragdropOptions.get(board) || {};
-    const callback = options[name];
-
-    if (typeof callback === "function") {
-      callback.call(board, payload);
-    }
-  }
-
-  function clearDragdropState() {
-    if (dragdropState) {
-      dragdropState.item.classList.remove("is-dragging");
-      dragdropState.board
-        .querySelectorAll(".is-drag-over")
-        .forEach((column) => column.classList.remove("is-drag-over"));
-    }
-
-    dragdropState = null;
-  }
-
-  function handleDragdropStart(event) {
-    const item = event.target.closest(dragdropItemSelector);
-    const board = resolveDragdropBoard(event.currentTarget);
-
-    if (!item || !board || !board.contains(item)) {
-      return;
-    }
-
-    const fromColumn = item.closest(dragdropColumnSelector);
-
-    if (!fromColumn || !board.contains(fromColumn)) {
-      return;
-    }
-
-    dragdropState = {
-      board,
-      item,
-      fromColumn,
-      fromIndex: getDragdropIndex(item, fromColumn),
-    };
-
-    item.classList.add("is-dragging");
-
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", item.getAttribute("data-id") || item.id || "");
-    }
-
-    callDragdropCallback(board, "onDrag", createDragdropPayload(event, fromColumn));
-  }
-
-  function handleDragdropOver(event) {
-    if (!dragdropState) {
-      return;
-    }
-
-    const column = event.target.closest(dragdropColumnSelector);
-
-    if (!column || !dragdropState.board.contains(column)) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = "move";
-    }
-
-    dragdropState.board
-      .querySelectorAll(".is-drag-over")
-      .forEach((currentColumn) => {
-        if (currentColumn !== column) {
-          currentColumn.classList.remove("is-drag-over");
-        }
-      });
-
-    column.classList.add("is-drag-over");
-
-    const insertBefore = getDragdropInsertBefore(column, event.clientY);
-    column.insertBefore(dragdropState.item, insertBefore);
-  }
-
-  function handleDragdropDrop(event) {
-    if (!dragdropState) {
-      return;
-    }
-
-    const column = event.target.closest(dragdropColumnSelector);
-
-    if (!column || !dragdropState.board.contains(column)) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const payload = createDragdropPayload(event, column);
-    const changedColumn = payload.fromColumn !== payload.toColumn;
-    const changedIndex = payload.fromIndex !== payload.toIndex;
-
-    if (changedColumn || changedIndex) {
-      callDragdropCallback(payload.board, "onDrop", payload);
-
-      if (changedColumn) {
-        callDragdropCallback(payload.board, "onChangeColumn", payload);
-      }
-    }
-
-    clearDragdropState();
-  }
-
-  function handleDragdropEnd() {
-    clearDragdropState();
-  }
-
-  function setupDragdrop(target, options) {
-    const board = resolveDragdropBoard(target);
-
-    if (!board) {
-      return null;
-    }
-
-    if (options !== undefined) {
-      dragdropOptions.set(board, Object.assign({}, dragdropOptions.get(board), options || {}));
-    } else if (!dragdropOptions.has(board)) {
-      dragdropOptions.set(board, {});
-    }
-
-    board.querySelectorAll(dragdropItemSelector).forEach((item) => {
-      if (!item.hasAttribute("draggable")) {
-        item.setAttribute("draggable", "true");
-      }
-    });
-
-    if (wiredDragdropBoards.has(board)) {
-      return board;
-    }
-
-    wiredDragdropBoards.add(board);
-    board.addEventListener("dragstart", handleDragdropStart);
-    board.addEventListener("dragover", handleDragdropOver);
-    board.addEventListener("drop", handleDragdropDrop);
-    board.addEventListener("dragend", handleDragdropEnd);
-
-    return board;
-  }
-
-  legacy.dragdrop = {
-    setup(target, options) {
-      return setupDragdrop(target, options);
-    },
-  };
-
-  function resolveMultiselect(target) {
-    if (!target) {
-      return null;
-    }
-
-    if (target.jquery) {
-      return resolveMultiselect(target[0]);
-    }
-
-    if (typeof target === "string") {
-      return resolveMultiselect(document.querySelector(target));
-    }
-
-    if (target.nodeType !== 1) {
-      return null;
-    }
-
-    if (target.matches("select[multiple]")) {
-      return target;
-    }
-
-    const rootElement = target.matches(".multiselect")
-      ? target
-      : target.closest(".multiselect");
-
-    return rootElement ? rootElement.previousElementSibling : null;
-  }
-
-  function getMultiselectPlaceholder(select) {
-    return select.getAttribute("data-placeholder") || "Select options";
-  }
-
-  function getMultiselectName(select) {
-    const ariaLabel = select.getAttribute("aria-label");
-
-    if (ariaLabel) {
-      return ariaLabel;
-    }
-
-    if (!select.id) {
-      return "";
-    }
-
-    try {
-      const label = document.querySelector('label[for="' + CSS.escape(select.id) + '"]');
-
-      return label ? label.textContent.trim() : "";
-    } catch (error) {
-      return "";
-    }
-  }
-
-  function getMultiselectSelectedOptions(select) {
-    return Array.from(select.options).filter((option) => option.selected);
-  }
-
-  function getMultiselectButtonText(select) {
-    const selectedOptions = getMultiselectSelectedOptions(select);
-
-    if (selectedOptions.length === 0) {
-      return getMultiselectPlaceholder(select);
-    }
-
-    if (selectedOptions.length <= 2) {
-      return selectedOptions.map((option) => option.text).join(", ");
-    }
-
-    return selectedOptions.length + " selected";
-  }
-
-  function getMultiselectOptions(rootElement) {
-    return Array.from(rootElement.querySelectorAll(".multiselect-option"));
-  }
-
-  function updateMultiselect(select) {
-    const state = multiselectMap.get(select);
-
-    if (!state) {
-      return select;
-    }
-
-    state.label.textContent = getMultiselectButtonText(select);
-    state.options.forEach((button, index) => {
-      const option = select.options[index];
-
-      button.setAttribute("aria-selected", option.selected ? "true" : "false");
-      button.setAttribute("aria-disabled", option.disabled ? "true" : "false");
-      button.disabled = option.disabled || select.disabled;
-    });
-
-    state.toggle.disabled = select.disabled;
-
-    return select;
-  }
-
-  function closeMultiselect(select) {
-    const state = multiselectMap.get(select);
-
-    if (!state) {
-      return select;
-    }
-
-    state.root.classList.remove("is-open");
-    state.toggle.setAttribute("aria-expanded", "false");
-
-    return select;
-  }
-
-  function openMultiselect(select) {
-    const state = multiselectMap.get(select);
-
-    if (!state || select.disabled) {
-      return select;
-    }
-
-    document.querySelectorAll(".multiselect.is-open").forEach((rootElement) => {
-      const currentSelect = rootElement.previousElementSibling;
-
-      if (currentSelect !== select) {
-        closeMultiselect(currentSelect);
-      }
-    });
-
-    state.root.classList.add("is-open");
-    state.toggle.setAttribute("aria-expanded", "true");
-
-    return select;
-  }
-
-  function toggleMultiselect(select) {
-    const state = multiselectMap.get(select);
-
-    if (!state) {
-      return select;
-    }
-
-    return state.root.classList.contains("is-open")
-      ? closeMultiselect(select)
-      : openMultiselect(select);
-  }
-
-  function toggleMultiselectOption(select, index) {
-    const option = select.options[index];
-
-    if (!option || option.disabled || select.disabled) {
-      return;
-    }
-
-    option.selected = !option.selected;
-    updateMultiselect(select);
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  function focusMultiselectOption(rootElement, index) {
-    const options = getMultiselectOptions(rootElement).filter((option) => !option.disabled);
-    const option = options[index];
-
-    if (option) {
-      option.focus();
-    }
-  }
-
-  function handleMultiselectClick(event) {
-    const select = resolveMultiselect(event.currentTarget);
-    const option = event.target.closest(".multiselect-option");
-
-    if (!select) {
-      return;
-    }
-
-    if (option) {
-      toggleMultiselectOption(select, Number(option.getAttribute("data-index")));
-      return;
-    }
-
-    if (event.target.closest(".multiselect-toggle")) {
-      toggleMultiselect(select);
-    }
-  }
-
-  function handleMultiselectKeydown(event) {
-    const select = resolveMultiselect(event.currentTarget);
-    const state = select ? multiselectMap.get(select) : null;
-
-    if (!state) {
-      return;
-    }
-
-    if (event.key === "Escape") {
-      closeMultiselect(select);
-      state.toggle.focus();
-      return;
-    }
-
-    if (event.target === state.toggle) {
-      if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openMultiselect(select);
-        focusMultiselectOption(state.root, 0);
-      }
-
-      return;
-    }
-
-    const options = getMultiselectOptions(state.root).filter((option) => !option.disabled);
-    const currentIndex = options.indexOf(event.target);
-
-    if (currentIndex < 0) {
-      return;
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      focusMultiselectOption(state.root, (currentIndex + 1) % options.length);
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      focusMultiselectOption(state.root, (currentIndex - 1 + options.length) % options.length);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      focusMultiselectOption(state.root, 0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      focusMultiselectOption(state.root, options.length - 1);
-    } else if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      toggleMultiselectOption(select, Number(event.target.getAttribute("data-index")));
-    }
-  }
-
-  function handleDocumentMultiselectClick(event) {
-    document.querySelectorAll(".multiselect.is-open").forEach((rootElement) => {
-      if (!rootElement.contains(event.target)) {
-        closeMultiselect(rootElement.previousElementSibling);
-      }
-    });
-  }
-
-  function createMultiselectOption(option, index, rootId) {
-    const button = document.createElement("button");
-
-    button.className = "multiselect-option";
-    button.type = "button";
-    button.id = rootId + "-option-" + index;
-    button.setAttribute("role", "option");
-    button.setAttribute("data-index", String(index));
-    button.textContent = option.text;
-
-    return button;
-  }
-
-  function setupMultiselect(target) {
-    const select = resolveMultiselect(target);
-
-    if (!select || !select.matches("select[multiple]")) {
-      return null;
-    }
-
-    if (wiredMultiselects.has(select)) {
-      updateMultiselect(select);
-      return select;
-    }
-
-    const rootElement = document.createElement("div");
-    const toggle = document.createElement("button");
-    const label = document.createElement("span");
-    const menu = document.createElement("div");
-    const rootId = select.id || select.name || "multiselect-" + ++multiselectId;
-    const menuId = rootId + "-menu";
-    const options = Array.from(select.options).map((option, index) =>
-      createMultiselectOption(option, index, rootId)
-    );
-
-    rootElement.className = "multiselect";
-    toggle.className = "multiselect-toggle";
-    toggle.id = rootId + "-toggle";
-    toggle.type = "button";
-    toggle.setAttribute("aria-expanded", "false");
-    toggle.setAttribute("aria-haspopup", "listbox");
-    toggle.setAttribute("aria-controls", menuId);
-    label.className = "multiselect-label";
-    menu.className = "multiselect-menu";
-    menu.id = menuId;
-    menu.setAttribute("role", "listbox");
-    menu.setAttribute("aria-multiselectable", "true");
-
-    const name = getMultiselectName(select);
-
-    if (name) {
-      toggle.setAttribute("aria-label", name);
-    }
-
-    toggle.append(label);
-
-    if (options.length === 0) {
-      const empty = document.createElement("div");
-
-      empty.className = "multiselect-empty";
-      empty.textContent = "No options";
-      menu.append(empty);
-    } else {
-      options.forEach((option) => menu.append(option));
-    }
-
-    rootElement.append(toggle, menu);
-    select.classList.add("multiselect-source");
-    select.after(rootElement);
-
-    multiselectMap.set(select, { label, menu, options, root: rootElement, toggle });
-    wiredMultiselects.add(select);
-    rootElement.addEventListener("click", handleMultiselectClick);
-    rootElement.addEventListener("keydown", handleMultiselectKeydown);
-    select.addEventListener("change", () => updateMultiselect(select));
-
-    if (select.form) {
-      select.form.addEventListener("reset", () => {
-        setTimeout(() => updateMultiselect(select), 0);
-      });
-    }
-
-    updateMultiselect(select);
-
-    return select;
-  }
-
-  legacy.multiselect = {
-    setup(target) {
-      return setupMultiselect(target);
-    },
-    open(target) {
-      return openMultiselect(resolveMultiselect(target));
-    },
-    close(target) {
-      return closeMultiselect(resolveMultiselect(target));
-    },
-    toggle(target) {
-      return toggleMultiselect(resolveMultiselect(target));
-    },
-  };
-
-  function resolvePagination(target) {
-    if (!target) {
-      return null;
-    }
-
-    if (target.jquery) {
-      return resolvePagination(target[0]);
-    }
-
-    if (typeof target === "string") {
-      return document.querySelector(target);
-    }
-
-    if (target.nodeType === 1) {
-      if (target.matches(paginationSelector)) {
-        return target;
-      }
-
-      return target.closest(paginationSelector);
-    }
-
-    return null;
-  }
-
-  function getPaginationNumber(value, fallback) {
-    const number = Number(value);
-
-    return Number.isFinite(number) && number > 0 ? number : fallback;
-  }
-
-  function getPaginationPageSizes(rootElement, options) {
-    const configured =
-      options.pageSizes ||
-      rootElement.getAttribute("data-page-sizes") ||
-      rootElement.getAttribute("data-page-size-options");
-    const values = Array.isArray(configured)
-      ? configured
-      : String(configured || "10,25,50").split(",");
-    const sizes = values
-      .map((value) => getPaginationNumber(value, 0))
-      .filter((value, index, list) => value > 0 && list.indexOf(value) === index);
-
-    return sizes.length > 0 ? sizes : [10, 25, 50];
-  }
-
-  function getPaginationTarget(rootElement, options) {
-    if (options.target) {
-      return typeof options.target === "string"
-        ? document.querySelector(options.target)
-        : options.target;
-    }
-
-    const selector = rootElement.getAttribute("data-target");
-
-    return selector ? document.querySelector(selector) : null;
-  }
-
-  function createPaginationResult(rootElement, options, state) {
-    if (typeof options.load === "function") {
-      return options.load.call(rootElement, {
-        page: state.page,
-        pageSize: state.pageSize,
-        offset: (state.page - 1) * state.pageSize,
-      });
-    }
-
-    const data = Array.isArray(options.data) ? options.data : [];
-    const start = (state.page - 1) * state.pageSize;
-
-    return {
-      items: data.slice(start, start + state.pageSize),
-      total: data.length,
-    };
-  }
-
-  function normalizePaginationResult(result, state) {
-    const payload = Array.isArray(result) ? { items: result, total: result.length } : result || {};
-    const items = Array.isArray(payload.items) ? payload.items : [];
-    const total = getPaginationNumber(payload.total, items.length);
-    const pageCount = Math.max(1, Math.ceil(total / state.pageSize));
-
-    return {
-      items,
-      page: getPaginationNumber(payload.page, state.page),
-      pageCount,
-      pageSize: getPaginationNumber(payload.pageSize, state.pageSize),
-      total,
-    };
-  }
-
-  function renderPaginationItem(item, index, options, state) {
-    if (typeof options.renderItem === "function") {
-      return options.renderItem(item, index, state);
-    }
-
-    const row = document.createElement("tr");
-    const values = item && typeof item === "object" ? Object.values(item) : [item];
-
-    values.forEach((value) => {
-      const cell = document.createElement("td");
-
-      cell.textContent = value == null ? "" : String(value);
-      row.append(cell);
-    });
-
-    return row;
-  }
-
-  function renderPaginationItems(rootElement, result) {
-    const options = paginationOptions.get(rootElement) || {};
-    const target = options.target;
-
-    if (!target) {
-      return;
-    }
-
-    target.replaceChildren();
-    result.items.forEach((item, index) => {
-      const rendered = renderPaginationItem(item, index, options, result);
-
-      if (typeof rendered === "string") {
-        target.insertAdjacentHTML("beforeend", rendered);
-      } else if (rendered) {
-        target.append(rendered);
-      }
-    });
-  }
-
-  function getPaginationPages(currentPage, pageCount, maxPages) {
-    const pages = [];
-
-    if (pageCount <= maxPages) {
-      for (let page = 1; page <= pageCount; page += 1) {
-        pages.push(page);
-      }
-
-      return pages;
-    }
-
-    pages.push(1);
-
-    const sideCount = Math.max(1, Math.floor((maxPages - 3) / 2));
-    const start = Math.max(2, currentPage - sideCount);
-    const end = Math.min(pageCount - 1, currentPage + sideCount);
-
-    if (start > 2) {
-      pages.push("ellipsis-start");
-    }
-
-    for (let page = start; page <= end; page += 1) {
-      pages.push(page);
-    }
-
-    if (end < pageCount - 1) {
-      pages.push("ellipsis-end");
-    }
-
-    pages.push(pageCount);
-
-    return pages;
-  }
-
-  function createPaginationButton(label, action, disabled) {
-    const button = document.createElement("button");
-
-    button.type = "button";
-    button.setAttribute("data-pagination-action", action);
-    button.textContent = label;
-    button.disabled = disabled;
-
-    return button;
-  }
-
-  function renderPaginationControls(rootElement, result) {
-    const options = paginationOptions.get(rootElement) || {};
-    const pageCount = result.pageCount;
-    const page = Math.min(result.page, pageCount);
-    const maxPages = getPaginationNumber(options.maxPages, 7);
-    const summary = document.createElement("span");
-    const pages = document.createElement("span");
-    const size = document.createElement("span");
-    const label = document.createElement("label");
-    const select = document.createElement("select");
-
-    summary.className = "pagination-summary";
-    summary.textContent = "Page " + page + " of " + pageCount + " (" + result.total + " items)";
-    pages.className = "pagination-pages";
-    pages.setAttribute("role", "group");
-    pages.setAttribute("aria-label", "Pages");
-    pages.append(createPaginationButton("Previous", "previous", page <= 1));
-
-    getPaginationPages(page, pageCount, maxPages).forEach((pageNumber) => {
-      if (typeof pageNumber !== "number") {
-        const ellipsis = document.createElement("span");
-
-        ellipsis.className = "pagination-ellipsis";
-        ellipsis.setAttribute("aria-hidden", "true");
-        ellipsis.textContent = "...";
-        pages.append(ellipsis);
-        return;
-      }
-
-      const button = createPaginationButton(String(pageNumber), "page", false);
-
-      button.className = "pagination-page";
-      button.setAttribute("data-pagination-page", String(pageNumber));
-      button.setAttribute("aria-label", "Page " + pageNumber);
-
-      if (pageNumber === page) {
-        button.setAttribute("aria-current", "page");
-      }
-
-      pages.append(button);
-    });
-
-    pages.append(createPaginationButton("Next", "next", page >= pageCount));
-    size.className = "pagination-size";
-    label.textContent = "Page size";
-
-    options.pageSizes.forEach((pageSize) => {
-      const option = document.createElement("option");
-
-      option.value = String(pageSize);
-      option.textContent = String(pageSize);
-      option.selected = pageSize === result.pageSize;
-      select.append(option);
-    });
-
-    select.setAttribute("data-pagination-size", "");
-    label.append(select);
-    size.append(label);
-    rootElement.replaceChildren(summary, pages, size);
-  }
-
-  function setPaginationLoading(rootElement, loading) {
-    rootElement.setAttribute("aria-busy", loading ? "true" : "false");
-    rootElement.querySelectorAll("button, select").forEach((control) => {
-      control.disabled = loading;
-    });
-  }
-
-  function handlePaginationError(rootElement, state, request, error) {
-    if (request !== state.request) {
-      return;
-    }
-
-    if (state.result) {
-      renderPaginationControls(rootElement, state.result);
-    } else {
-      setPaginationLoading(rootElement, false);
-    }
-
-    rootElement.dispatchEvent(
-      new CustomEvent("pagination:error", {
-        bubbles: true,
-        detail: { error },
-      })
-    );
-  }
-
-  function updatePagination(rootElement) {
-    const options = rootElement ? paginationOptions.get(rootElement) : null;
-    const state = rootElement ? paginationState.get(rootElement) : null;
-
-    if (!options || !state) {
-      return rootElement;
-    }
-
-    state.request += 1;
-    const request = state.request;
-
-    setPaginationLoading(rootElement, true);
-
-    try {
-      Promise.resolve(createPaginationResult(rootElement, options, state))
-        .then((rawResult) => {
-          if (request !== state.request) {
-            return;
-          }
-
-          const result = normalizePaginationResult(rawResult, state);
-
-          state.page = Math.min(result.page, result.pageCount);
-          state.pageSize = result.pageSize;
-          state.result = result;
-          renderPaginationItems(rootElement, result);
-          renderPaginationControls(rootElement, result);
-          rootElement.dispatchEvent(
-            new CustomEvent("pagination:change", {
-              bubbles: true,
-              detail: result,
-            })
-          );
-        })
-        .catch((error) => {
-          handlePaginationError(rootElement, state, request, error);
-        });
-    } catch (error) {
-      handlePaginationError(rootElement, state, request, error);
-    }
-
-    return rootElement;
-  }
-
-  function setPaginationPage(rootElement, page) {
-    const state = rootElement ? paginationState.get(rootElement) : null;
-
-    if (!state) {
-      return null;
-    }
-
-    state.page = getPaginationNumber(page, state.page);
-
-    return updatePagination(rootElement);
-  }
-
-  function setPaginationPageSize(rootElement, pageSize) {
-    const state = rootElement ? paginationState.get(rootElement) : null;
-
-    if (!state) {
-      return null;
-    }
-
-    state.page = 1;
-    state.pageSize = getPaginationNumber(pageSize, state.pageSize);
-
-    return updatePagination(rootElement);
-  }
-
-  function handlePaginationClick(event) {
-    const rootElement = resolvePagination(event.currentTarget);
-    const button = event.target.closest("[data-pagination-action]");
-    const state = rootElement ? paginationState.get(rootElement) : null;
-
-    if (!button || !state || button.disabled) {
-      return;
-    }
-
-    const action = button.getAttribute("data-pagination-action");
-
-    if (action === "previous") {
-      setPaginationPage(rootElement, state.page - 1);
-    } else if (action === "next") {
-      setPaginationPage(rootElement, state.page + 1);
-    } else if (action === "page") {
-      setPaginationPage(rootElement, button.getAttribute("data-pagination-page"));
-    }
-  }
-
-  function handlePaginationChange(event) {
-    if (event.target.matches("[data-pagination-size]")) {
-      setPaginationPageSize(event.currentTarget, event.target.value);
-    }
-  }
-
-  function setupPagination(target, options) {
-    const rootElement = resolvePagination(target);
-
-    if (!rootElement) {
-      return null;
-    }
-
-    const nextOptions = Object.assign({}, paginationOptions.get(rootElement), options || {});
-
-    nextOptions.target = getPaginationTarget(rootElement, nextOptions);
-    nextOptions.pageSizes = getPaginationPageSizes(rootElement, nextOptions);
-    nextOptions.pageSize = getPaginationNumber(
-      nextOptions.pageSize || rootElement.getAttribute("data-page-size"),
-      nextOptions.pageSizes[0]
-    );
-    nextOptions.maxPages = getPaginationNumber(
-      nextOptions.maxPages || rootElement.getAttribute("data-max-pages"),
-      7
-    );
-
-    paginationOptions.set(rootElement, nextOptions);
-
-    if (paginationState.has(rootElement)) {
-      const state = paginationState.get(rootElement);
-
-      if (options && options.pageSize) {
-        state.page = 1;
-        state.pageSize = nextOptions.pageSize;
-      }
-    } else {
-      paginationState.set(rootElement, {
-        page: getPaginationNumber(rootElement.getAttribute("data-page"), 1),
-        pageSize: nextOptions.pageSize,
-        request: 0,
-      });
-    }
-
-    if (!wiredPaginations.has(rootElement)) {
-      wiredPaginations.add(rootElement);
-      rootElement.addEventListener("click", handlePaginationClick);
-      rootElement.addEventListener("change", handlePaginationChange);
-    }
-
-    updatePagination(rootElement);
-
-    return rootElement;
-  }
-
-  legacy.pagination = {
-    setup(target, options) {
-      return setupPagination(target, options);
-    },
-    goTo(target, page) {
-      return setPaginationPage(resolvePagination(target), page);
-    },
-    pageSize(target, pageSize) {
-      return setPaginationPageSize(resolvePagination(target), pageSize);
-    },
-    refresh(target) {
-      return updatePagination(resolvePagination(target));
-    },
-  };
-
-  document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(popoverTriggerSelector).forEach(setupPopover);
-    document.querySelectorAll("[data-tabs], .tabs").forEach(setupTabs);
-    document.querySelectorAll(dragdropBoardSelector).forEach((board) => {
-      setupDragdrop(board);
-    });
-    document.querySelectorAll(multiselectSelector).forEach(setupMultiselect);
-    document.querySelectorAll("[data-pagination]").forEach((rootElement) => {
-      setupPagination(rootElement);
-    });
-  });
-
-  document.addEventListener("click", handleDocumentMultiselectClick);
-  document.addEventListener("click", handleDocumentPopoverClick);
-  document.addEventListener("keydown", handleDocumentPopoverKeydown);
-  window.addEventListener("resize", updateOpenPopoverPosition);
-  window.addEventListener("scroll", updateOpenPopoverPosition, true);
-
-  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.modal) {
-    root.jQuery.fn.modal = function (action) {
-      const method = action || "open";
-
-      return this.each(function () {
-        if (method === "close") {
-          legacy.modal.close(this);
-          return;
-        }
-
-        if (method === "toggle") {
-          legacy.modal.toggle(this);
-          return;
-        }
-
-        legacy.modal.open(this);
-      });
-    };
-  }
-
-  if (root.jQuery && !root.jQuery.toast) {
-    root.jQuery.toast = function (message, options) {
-      return legacy.toast.show(message, options);
-    };
-  }
-
-  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.toast) {
-    root.jQuery.fn.toast = function (action) {
-      return this.each(function () {
-        if (action === "close") {
-          legacy.toast.close(this);
-          return;
-        }
-
-        legacy.toast.show(this, action);
-      });
-    };
-  }
-
-  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.tabs) {
-    root.jQuery.fn.tabs = function (action, index) {
-      return this.each(function () {
-        if (action === "select") {
-          legacy.tabs.select(this, index);
-          return;
-        }
-
-        legacy.tabs.setup(this);
-      });
-    };
-  }
-
-  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.popover) {
-    root.jQuery.fn.popover = function (action) {
-      return this.each(function () {
-        if (action === "open") {
-          legacy.popover.open(this);
-          return;
-        }
-
-        if (action === "close") {
-          legacy.popover.close(this);
-          return;
-        }
-
-        if (action === "toggle") {
-          legacy.popover.toggle(this);
-          return;
-        }
-
-        legacy.popover.setup(this);
-      });
-    };
-  }
-
-  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.dragdrop) {
-    root.jQuery.fn.dragdrop = function (options) {
-      return this.each(function () {
-        legacy.dragdrop.setup(this, options);
-      });
-    };
-  }
-
-  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.multiselect) {
-    root.jQuery.fn.multiselect = function (action) {
-      return this.each(function () {
-        if (action === "open") {
-          legacy.multiselect.open(this);
-          return;
-        }
-
-        if (action === "close") {
-          legacy.multiselect.close(this);
-          return;
-        }
-
-        if (action === "toggle") {
-          legacy.multiselect.toggle(this);
-          return;
-        }
-
-        legacy.multiselect.setup(this);
-      });
-    };
-  }
-
-  if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.pagination) {
-    root.jQuery.fn.pagination = function (action, value) {
-      return this.each(function () {
-        if (action === "goTo") {
-          legacy.pagination.goTo(this, value);
-          return;
-        }
-
-        if (action === "pageSize") {
-          legacy.pagination.pageSize(this, value);
-          return;
-        }
-
-        if (action === "refresh") {
-          legacy.pagination.refresh(this);
-          return;
-        }
-
-        legacy.pagination.setup(this, action);
-      });
-    };
-  }
+(function() {
+	//#region src/legacy.ts
+	var legacyToastPositions = [
+		"top-left",
+		"top-right",
+		"bottom-left",
+		"bottom-right"
+	];
+	var legacyPopoverPlacements = [
+		"top",
+		"right",
+		"bottom",
+		"left"
+	];
+	(function() {
+		const root = window;
+		if (!root.LegacyCss) root.LegacyCss = {};
+		const legacy = root.LegacyCss;
+		const openDialogs = [];
+		const openerMap = /* @__PURE__ */ new WeakMap();
+		const fallbackDialogs = /* @__PURE__ */ new WeakSet();
+		const wiredDialogs = /* @__PURE__ */ new WeakSet();
+		const wiredTabs = /* @__PURE__ */ new WeakSet();
+		const wiredPopoverTriggers = /* @__PURE__ */ new WeakSet();
+		const wiredDragdropBoards = /* @__PURE__ */ new WeakSet();
+		const wiredMultiselects = /* @__PURE__ */ new WeakSet();
+		const wiredPaginations = /* @__PURE__ */ new WeakSet();
+		const multiselectMap = /* @__PURE__ */ new WeakMap();
+		const dragdropOptions = /* @__PURE__ */ new WeakMap();
+		const paginationOptions = /* @__PURE__ */ new WeakMap();
+		const paginationState = /* @__PURE__ */ new WeakMap();
+		const toastTimers = /* @__PURE__ */ new WeakMap();
+		const supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
+		const dragdropBoardSelector = "[data-dragdrop], .dragdrop";
+		const dragdropColumnSelector = "[data-dragdrop-column], .dragdrop-column";
+		const dragdropItemSelector = "[data-dragdrop-item], .dragdrop-item";
+		const multiselectSelector = "select[multiple][data-multiselect], select[multiple].multiselect-source";
+		const paginationSelector = "[data-pagination], .pagination";
+		const popoverTriggerSelector = "[data-popover-target], [data-popover]";
+		let scrollLockCount = 0;
+		let previousBodyOverflow = "";
+		let previousHtmlOverflow = "";
+		let dragdropState = null;
+		let multiselectId = 0;
+		let openPopoverTrigger = null;
+		const focusableSelector = [
+			"a[href]",
+			"button:not([disabled])",
+			"input:not([disabled])",
+			"select:not([disabled])",
+			"textarea:not([disabled])",
+			"[tabindex]:not([tabindex=\"-1\"])"
+		].join(", ");
+		function isLegacyCollection(target) {
+			return typeof target === "object" && target !== null && "jquery" in target;
+		}
+		function isElement(target) {
+			return typeof target === "object" && target !== null && "nodeType" in target && target.nodeType === 1;
+		}
+		function isSelectElement(target) {
+			return isElement(target) && target.nodeName === "SELECT";
+		}
+		function eventTargetElement(event) {
+			return isElement(event.target) ? event.target : null;
+		}
+		function currentTargetElement(event) {
+			return isElement(event.currentTarget) ? event.currentTarget : null;
+		}
+		function listen(target, type, listener) {
+			target.addEventListener(type, listener);
+		}
+		function isToastPosition(position) {
+			return typeof position === "string" && legacyToastPositions.includes(position);
+		}
+		function isPopoverPlacement(placement) {
+			return typeof placement === "string" && legacyPopoverPlacements.includes(placement);
+		}
+		function resolveDialog(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveDialog(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (typeof HTMLDialogElement !== "undefined" && target instanceof HTMLDialogElement) return target;
+			if (isElement(target) && target.nodeName === "DIALOG") return target;
+			return null;
+		}
+		function getFocusableElement(dialog) {
+			return dialog.querySelector("[autofocus], [data-modal-autofocus], " + focusableSelector);
+		}
+		function focusDialog(dialog) {
+			const focusTarget = getFocusableElement(dialog);
+			if (focusTarget) {
+				try {
+					focusTarget.focus({ preventScroll: true });
+				} catch (error) {
+					focusTarget.focus();
+				}
+				return;
+			}
+			if (!dialog.hasAttribute("tabindex")) dialog.setAttribute("tabindex", "-1");
+			try {
+				dialog.focus({ preventScroll: true });
+			} catch (error) {
+				dialog.focus();
+			}
+		}
+		function lockScroll() {
+			if (scrollLockCount > 0) {
+				scrollLockCount += 1;
+				return;
+			}
+			previousBodyOverflow = document.body.style.overflow;
+			previousHtmlOverflow = document.documentElement.style.overflow;
+			document.body.style.overflow = "hidden";
+			document.documentElement.style.overflow = "hidden";
+			scrollLockCount = 1;
+		}
+		function unlockScroll() {
+			if (scrollLockCount === 0) return;
+			scrollLockCount -= 1;
+			if (scrollLockCount > 0) return;
+			document.body.style.overflow = previousBodyOverflow;
+			document.documentElement.style.overflow = previousHtmlOverflow;
+		}
+		function removeFromOpenDialogs(dialog) {
+			const index = openDialogs.indexOf(dialog);
+			if (index >= 0) openDialogs.splice(index, 1);
+		}
+		function restoreFocus(dialog) {
+			const opener = openerMap.get(dialog);
+			if (opener && typeof opener.focus === "function" && document.contains(opener)) try {
+				opener.focus({ preventScroll: true });
+			} catch (error) {
+				opener.focus();
+			}
+			openerMap.delete(dialog);
+		}
+		function handleClose(event) {
+			const dialog = event.currentTarget;
+			removeFromOpenDialogs(dialog);
+			dialog.removeAttribute("aria-modal");
+			restoreFocus(dialog);
+			if (fallbackDialogs.has(dialog)) {
+				fallbackDialogs.delete(dialog);
+				unlockScroll();
+				if (scrollLockCount === 0) document.removeEventListener("keydown", handleKeydown);
+			}
+		}
+		function closeDialogElement(dialog, returnValue = "") {
+			if (!dialog) return null;
+			if (!dialog.open) return dialog;
+			if (typeof dialog.close === "function") dialog.close(returnValue);
+			else {
+				dialog.removeAttribute("open");
+				handleClose({ currentTarget: dialog });
+			}
+			return dialog;
+		}
+		function handleBackdropClick(event) {
+			const dialog = event.currentTarget;
+			const target = eventTargetElement(event);
+			if (target === dialog) {
+				closeDialogElement(dialog);
+				return;
+			}
+			if (target && target.closest("[data-modal-close]")) closeDialogElement(dialog);
+		}
+		function handleKeydown(event) {
+			if (event.key !== "Escape") return;
+			const dialog = openDialogs[openDialogs.length - 1];
+			if (!dialog || !fallbackDialogs.has(dialog)) return;
+			event.preventDefault();
+			closeDialogElement(dialog);
+		}
+		function wireDialog(dialog) {
+			if (wiredDialogs.has(dialog)) return;
+			wiredDialogs.add(dialog);
+			dialog.addEventListener("close", handleClose);
+			dialog.addEventListener("click", handleBackdropClick);
+		}
+		function openDialogElement(dialog) {
+			if (!dialog) return null;
+			wireDialog(dialog);
+			if (dialog.open) return dialog;
+			openerMap.set(dialog, document.activeElement instanceof HTMLElement ? document.activeElement : null);
+			dialog.setAttribute("aria-modal", "true");
+			try {
+				if (dialog.isConnected && supportsNativeDialog(dialog)) dialog.showModal();
+				else throw new Error("dialog.showModal is unavailable");
+			} catch (error) {
+				dialog.setAttribute("open", "");
+				fallbackDialogs.add(dialog);
+				lockScroll();
+			}
+			if (!openDialogs.includes(dialog)) openDialogs.push(dialog);
+			focusDialog(dialog);
+			if (fallbackDialogs.has(dialog)) document.addEventListener("keydown", handleKeydown);
+			return dialog;
+		}
+		function toggleDialogElement(dialog) {
+			if (!dialog) return null;
+			return dialog.open ? closeDialogElement(dialog) : openDialogElement(dialog);
+		}
+		legacy.modal = {
+			open(target) {
+				return openDialogElement(resolveDialog(target));
+			},
+			close(target, returnValue) {
+				return closeDialogElement(resolveDialog(target), returnValue);
+			},
+			toggle(target) {
+				return toggleDialogElement(resolveDialog(target));
+			}
+		};
+		function resolveToast(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveToast(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (isElement(target) && target.matches(".toast, [data-toast]")) return target;
+			return null;
+		}
+		function normalizeToastPosition(position) {
+			return isToastPosition(position) ? position : "bottom-right";
+		}
+		function getToastRegion(position) {
+			const normalizedPosition = normalizeToastPosition(position);
+			let region = document.querySelector("[data-toast-region][data-position=\"" + normalizedPosition + "\"], .toast-region[data-position=\"" + normalizedPosition + "\"]");
+			if (region) return region;
+			region = document.createElement("div");
+			region.className = "toast-region";
+			region.dataset.position = normalizedPosition;
+			region.dataset.toastRegion = "";
+			region.setAttribute("aria-live", "polite");
+			region.setAttribute("aria-atomic", "false");
+			document.body.append(region);
+			return region;
+		}
+		function normalizeToastOptions(message, options) {
+			if (message && typeof message === "object" && !("nodeType" in message) && !("jquery" in message)) return Object.assign({}, message);
+			return Object.assign({}, options, { message: isLegacyCollection(message) ? message[0] : message });
+		}
+		function resolveToastContainer(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveToastContainer(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (isElement(target)) return target;
+			return null;
+		}
+		function setToastContent(toast, options) {
+			const body = document.createElement("div");
+			body.className = "toast-body";
+			if (options.title) {
+				const title = document.createElement("strong");
+				title.className = "toast-title";
+				title.textContent = options.title;
+				body.append(title);
+			}
+			if (options.message && typeof options.message === "object" && "nodeType" in options.message) body.append(options.message);
+			else {
+				const message = document.createElement("span");
+				message.textContent = options.message || "";
+				body.append(message);
+			}
+			toast.append(body);
+		}
+		function closeToastElement(toast) {
+			if (!toast) return null;
+			const timer = toastTimers.get(toast);
+			if (timer) {
+				window.clearTimeout(timer);
+				toastTimers.delete(toast);
+			}
+			toast.dispatchEvent(new CustomEvent("toast:close", { bubbles: true }));
+			toast.remove();
+			return toast;
+		}
+		function showToast(message, options) {
+			const nextOptions = normalizeToastOptions(message, options);
+			const type = nextOptions.type && [
+				"info",
+				"success",
+				"warning",
+				"danger",
+				"muted"
+			].includes(nextOptions.type) ? nextOptions.type : "info";
+			const region = nextOptions.container ? resolveToastContainer(nextOptions.container) : getToastRegion(nextOptions.position);
+			const toast = document.createElement("section");
+			const duration = typeof nextOptions.duration === "number" ? nextOptions.duration : 5e3;
+			if (!region) return null;
+			toast.className = "toast";
+			toast.dataset.toast = "";
+			toast.setAttribute("role", type === "danger" ? "alert" : "status");
+			if (type !== "info") toast.classList.add("toast-" + type);
+			setToastContent(toast, nextOptions);
+			if (nextOptions.dismissible !== false) {
+				const closeButton = document.createElement("button");
+				closeButton.type = "button";
+				closeButton.className = "toast-close";
+				closeButton.setAttribute("aria-label", nextOptions.closeLabel || "Close notification");
+				closeButton.textContent = nextOptions.closeText || "Close";
+				closeButton.addEventListener("click", function() {
+					closeToastElement(toast);
+				});
+				toast.append(closeButton);
+			}
+			region.append(toast);
+			toast.dispatchEvent(new CustomEvent("toast:show", { bubbles: true }));
+			if (duration > 0) toastTimers.set(toast, window.setTimeout(function() {
+				closeToastElement(toast);
+			}, duration));
+			return toast;
+		}
+		function clearToasts(target) {
+			const rootElement = target ? resolveToastContainer(target) : document;
+			const toasts = rootElement ? Array.from(rootElement.querySelectorAll(".toast, [data-toast]")) : [];
+			toasts.forEach(closeToastElement);
+			return toasts;
+		}
+		legacy.toast = {
+			show(message, options) {
+				return showToast(message, options);
+			},
+			close(target) {
+				return closeToastElement(resolveToast(target));
+			},
+			clear(target) {
+				return clearToasts(target);
+			}
+		};
+		function resolveElement(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveElement(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			return isElement(target) ? target : null;
+		}
+		function resolvePopoverTrigger(target) {
+			const element = resolveElement(target);
+			if (!element) return null;
+			if (element.matches(popoverTriggerSelector)) return element;
+			return element.closest(popoverTriggerSelector);
+		}
+		function resolvePopover(target) {
+			const element = resolveElement(target);
+			if (!element) return null;
+			if (element.matches(".popover, [data-popover-content]")) return element;
+			const trigger = resolvePopoverTrigger(element);
+			return trigger ? getTriggerPopover(trigger) : null;
+		}
+		function getTriggerPopover(trigger) {
+			const target = trigger.getAttribute("data-popover-target") || trigger.getAttribute("data-popover") || trigger.getAttribute("aria-controls");
+			if (!target) return null;
+			if (target.charAt(0) === "#") return document.querySelector(target);
+			return document.getElementById(target);
+		}
+		function getPopoverPlacement(trigger) {
+			const placement = trigger.getAttribute("data-popover-placement");
+			return isPopoverPlacement(placement) ? placement : "bottom";
+		}
+		function positionPopover(trigger, popover) {
+			const gap = 4;
+			const margin = 8;
+			const placement = getPopoverPlacement(trigger);
+			const triggerRect = trigger.getBoundingClientRect();
+			const popoverRect = popover.getBoundingClientRect();
+			let top = triggerRect.bottom + gap;
+			let left = triggerRect.left;
+			if (placement === "top") {
+				top = triggerRect.top - popoverRect.height - gap;
+				left = triggerRect.left;
+			} else if (placement === "right") {
+				top = triggerRect.top;
+				left = triggerRect.right + gap;
+			} else if (placement === "left") {
+				top = triggerRect.top;
+				left = triggerRect.left - popoverRect.width - gap;
+			}
+			top = Math.max(margin, Math.min(top, window.innerHeight - popoverRect.height - margin));
+			left = Math.max(margin, Math.min(left, window.innerWidth - popoverRect.width - margin));
+			popover.style.top = top + "px";
+			popover.style.left = left + "px";
+		}
+		function closePopover(trigger) {
+			const currentTrigger = trigger || openPopoverTrigger;
+			const popover = currentTrigger ? getTriggerPopover(currentTrigger) : null;
+			if (!currentTrigger || !popover) return null;
+			popover.hidden = true;
+			currentTrigger.setAttribute("aria-expanded", "false");
+			if (openPopoverTrigger === currentTrigger) openPopoverTrigger = null;
+			return popover;
+		}
+		function openPopover(trigger) {
+			const popover = trigger ? getTriggerPopover(trigger) : null;
+			if (!trigger || !popover) return null;
+			if (openPopoverTrigger && openPopoverTrigger !== trigger) closePopover(openPopoverTrigger);
+			wirePopoverTrigger(trigger);
+			popover.hidden = false;
+			trigger.setAttribute("aria-expanded", "true");
+			openPopoverTrigger = trigger;
+			positionPopover(trigger, popover);
+			return popover;
+		}
+		function togglePopover(trigger) {
+			const popover = trigger ? getTriggerPopover(trigger) : null;
+			if (!popover) return null;
+			return popover.hidden ? openPopover(trigger) : closePopover(trigger);
+		}
+		function handlePopoverClick(event) {
+			event.preventDefault();
+			togglePopover(currentTargetElement(event));
+		}
+		function handlePopoverKeydown(event) {
+			if (event.key !== "Escape") return;
+			const trigger = currentTargetElement(event);
+			if (!trigger) return;
+			const popover = getTriggerPopover(trigger);
+			if (!popover || popover.hidden) return;
+			event.preventDefault();
+			closePopover(trigger);
+			if (trigger instanceof HTMLElement) trigger.focus();
+		}
+		function handleDocumentPopoverClick(event) {
+			if (!openPopoverTrigger) return;
+			const target = eventTargetElement(event);
+			if (!target) return;
+			const popover = getTriggerPopover(openPopoverTrigger);
+			if (openPopoverTrigger.contains(target) || popover && popover.contains(target)) return;
+			closePopover(openPopoverTrigger);
+		}
+		function handleDocumentPopoverKeydown(event) {
+			if (event.key !== "Escape" || !openPopoverTrigger) return;
+			event.preventDefault();
+			closePopover(openPopoverTrigger);
+		}
+		function updateOpenPopoverPosition() {
+			if (!openPopoverTrigger) return;
+			const popover = getTriggerPopover(openPopoverTrigger);
+			if (popover && !popover.hidden) positionPopover(openPopoverTrigger, popover);
+		}
+		function wirePopoverTrigger(trigger) {
+			const popover = getTriggerPopover(trigger);
+			if (!popover) return trigger;
+			if (!popover.id && trigger.getAttribute("data-popover-target")) popover.id = (trigger.getAttribute("data-popover-target") || "").replace(/^#/, "");
+			trigger.setAttribute("aria-haspopup", "dialog");
+			trigger.setAttribute("aria-expanded", popover.hidden ? "false" : "true");
+			if (popover.id) trigger.setAttribute("aria-controls", popover.id);
+			if (!popover.hasAttribute("role")) popover.setAttribute("role", "dialog");
+			if (!wiredPopoverTriggers.has(trigger)) {
+				wiredPopoverTriggers.add(trigger);
+				listen(trigger, "click", handlePopoverClick);
+				listen(trigger, "keydown", handlePopoverKeydown);
+			}
+			return trigger;
+		}
+		function setupPopover(target) {
+			const trigger = resolvePopoverTrigger(target);
+			return trigger ? wirePopoverTrigger(trigger) : null;
+		}
+		legacy.popover = {
+			setup(target) {
+				return setupPopover(target);
+			},
+			open(target) {
+				return openPopover(resolvePopoverTrigger(target));
+			},
+			close(target) {
+				const trigger = resolvePopoverTrigger(target);
+				if (trigger) return closePopover(trigger);
+				const popover = resolvePopover(target);
+				return popover && openPopoverTrigger && getTriggerPopover(openPopoverTrigger) === popover ? closePopover(openPopoverTrigger) : popover;
+			},
+			toggle(target) {
+				return togglePopover(resolvePopoverTrigger(target));
+			}
+		};
+		function resolveTabs(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveTabs(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (isElement(target)) {
+				if (target.matches("[data-tabs], .tabs")) return target;
+				return target.closest("[data-tabs], .tabs");
+			}
+			return null;
+		}
+		function getTabs(rootElement) {
+			const tabList = Array.from(rootElement.children).find((element) => element.matches("[role=\"tablist\"], .tabs-list"));
+			if (!tabList) return [];
+			return Array.from(tabList.children).filter((element) => element.matches("[role=\"tab\"]"));
+		}
+		function getTabPanels(rootElement) {
+			return Array.from(rootElement.children).filter((element) => element.matches("[role=\"tabpanel\"]"));
+		}
+		function getTabPanel(rootElement, tab) {
+			const panelId = tab.getAttribute("aria-controls");
+			if (!panelId) return null;
+			try {
+				return rootElement.querySelector("#" + CSS.escape(panelId));
+			} catch (error) {
+				return document.getElementById(panelId);
+			}
+		}
+		function selectTab(tab, setFocus) {
+			const rootElement = resolveTabs(tab);
+			if (!rootElement || !tab) return null;
+			getTabs(rootElement).forEach((currentTab) => {
+				const selected = currentTab === tab;
+				const panel = getTabPanel(rootElement, currentTab);
+				currentTab.setAttribute("aria-selected", selected ? "true" : "false");
+				currentTab.setAttribute("tabindex", selected ? "0" : "-1");
+				if (panel) panel.hidden = !selected;
+			});
+			if (setFocus && tab instanceof HTMLElement) tab.focus();
+			return tab;
+		}
+		function selectTabByIndex(rootElement, index, setFocus) {
+			const tab = getTabs(rootElement)[index];
+			if (!tab) return null;
+			return selectTab(tab, setFocus);
+		}
+		function handleTabClick(event) {
+			const target = eventTargetElement(event);
+			const tab = target ? target.closest("[role=\"tab\"]") : null;
+			if (tab) selectTab(tab, false);
+		}
+		function handleTabKeydown(event) {
+			const rootElement = resolveTabs(currentTargetElement(event));
+			const target = eventTargetElement(event);
+			if (!rootElement || !target) return;
+			const tabs = getTabs(rootElement);
+			const currentIndex = tabs.indexOf(target);
+			if (currentIndex < 0) return;
+			let nextIndex = currentIndex;
+			if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (currentIndex + 1) % tabs.length;
+			else if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+			else if (event.key === "Home") nextIndex = 0;
+			else if (event.key === "End") nextIndex = tabs.length - 1;
+			else return;
+			event.preventDefault();
+			selectTabByIndex(rootElement, nextIndex, true);
+		}
+		function setupTabs(target) {
+			const rootElement = resolveTabs(target);
+			if (!rootElement || wiredTabs.has(rootElement)) return rootElement;
+			wiredTabs.add(rootElement);
+			listen(rootElement, "click", handleTabClick);
+			listen(rootElement, "keydown", handleTabKeydown);
+			const tabs = getTabs(rootElement);
+			const selectedTab = tabs.find((tab) => tab.getAttribute("aria-selected") === "true") || tabs[0];
+			getTabPanels(rootElement).forEach((panel) => {
+				if (!panel.hasAttribute("tabindex")) panel.setAttribute("tabindex", "0");
+			});
+			if (selectedTab) selectTab(selectedTab, false);
+			return rootElement;
+		}
+		legacy.tabs = {
+			setup(target) {
+				return setupTabs(target);
+			},
+			select(target, index) {
+				const rootElement = resolveTabs(target);
+				if (!rootElement) return null;
+				if (typeof index === "number") return selectTabByIndex(rootElement, index, false);
+				return selectTab(rootElement.querySelector(index), false);
+			}
+		};
+		function resolveDragdropBoard(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveDragdropBoard(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (isElement(target)) {
+				if (target.matches(dragdropBoardSelector)) return target;
+				return target.closest(dragdropBoardSelector);
+			}
+			return null;
+		}
+		function getDragdropItems(column) {
+			return Array.from(column.querySelectorAll(dragdropItemSelector)).filter((item) => item.closest(dragdropColumnSelector) === column);
+		}
+		function getDragdropColumnId(column) {
+			return column.getAttribute("data-column") || column.id || null;
+		}
+		function getDragdropIndex(item, column) {
+			return getDragdropItems(column).indexOf(item);
+		}
+		function getDragdropInsertBefore(column, clientY) {
+			return getDragdropItems(column).filter((item) => !item.classList.contains("is-dragging")).reduce((closest, item) => {
+				const rect = item.getBoundingClientRect();
+				const offset = clientY - rect.top - rect.height / 2;
+				if (offset < 0 && offset > closest.offset) return {
+					offset,
+					item
+				};
+				return closest;
+			}, {
+				offset: Number.NEGATIVE_INFINITY,
+				item: null
+			}).item;
+		}
+		function createDragdropPayload(originalEvent, toColumn) {
+			if (!dragdropState) return null;
+			const destinationColumn = toColumn || dragdropState.item.closest(dragdropColumnSelector);
+			return {
+				board: dragdropState.board,
+				item: dragdropState.item,
+				fromColumn: dragdropState.fromColumn,
+				toColumn: destinationColumn,
+				fromColumnId: getDragdropColumnId(dragdropState.fromColumn),
+				toColumnId: destinationColumn ? getDragdropColumnId(destinationColumn) : null,
+				fromIndex: dragdropState.fromIndex,
+				toIndex: destinationColumn ? getDragdropIndex(dragdropState.item, destinationColumn) : -1,
+				originalEvent
+			};
+		}
+		function callDragdropCallback(board, name, payload) {
+			const callback = (dragdropOptions.get(board) || {})[name];
+			if (typeof callback === "function") callback.call(board, payload);
+		}
+		function clearDragdropState() {
+			if (dragdropState) {
+				dragdropState.item.classList.remove("is-dragging");
+				dragdropState.board.querySelectorAll(".is-drag-over").forEach((column) => column.classList.remove("is-drag-over"));
+			}
+			dragdropState = null;
+		}
+		function handleDragdropStart(event) {
+			const target = eventTargetElement(event);
+			const item = target ? target.closest(dragdropItemSelector) : null;
+			const board = resolveDragdropBoard(currentTargetElement(event));
+			if (!item || !board || !board.contains(item)) return;
+			const fromColumn = item.closest(dragdropColumnSelector);
+			if (!fromColumn || !board.contains(fromColumn)) return;
+			dragdropState = {
+				board,
+				item,
+				fromColumn,
+				fromIndex: getDragdropIndex(item, fromColumn)
+			};
+			item.classList.add("is-dragging");
+			if (event.dataTransfer) {
+				event.dataTransfer.effectAllowed = "move";
+				event.dataTransfer.setData("text/plain", item.getAttribute("data-id") || item.id || "");
+			}
+			callDragdropCallback(board, "onDrag", createDragdropPayload(event, fromColumn));
+		}
+		function handleDragdropOver(event) {
+			if (!dragdropState) return;
+			const target = eventTargetElement(event);
+			const column = target ? target.closest(dragdropColumnSelector) : null;
+			if (!column || !dragdropState.board.contains(column)) return;
+			event.preventDefault();
+			if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+			dragdropState.board.querySelectorAll(".is-drag-over").forEach((currentColumn) => {
+				if (currentColumn !== column) currentColumn.classList.remove("is-drag-over");
+			});
+			column.classList.add("is-drag-over");
+			const insertBefore = getDragdropInsertBefore(column, event.clientY);
+			column.insertBefore(dragdropState.item, insertBefore);
+		}
+		function handleDragdropDrop(event) {
+			if (!dragdropState) return;
+			const target = eventTargetElement(event);
+			const column = target ? target.closest(dragdropColumnSelector) : null;
+			if (!column || !dragdropState.board.contains(column)) return;
+			event.preventDefault();
+			const payload = createDragdropPayload(event, column);
+			if (!payload) return;
+			const changedColumn = payload.fromColumn !== payload.toColumn;
+			const changedIndex = payload.fromIndex !== payload.toIndex;
+			if (changedColumn || changedIndex) {
+				callDragdropCallback(payload.board, "onDrop", payload);
+				if (changedColumn) callDragdropCallback(payload.board, "onChangeColumn", payload);
+			}
+			clearDragdropState();
+		}
+		function handleDragdropEnd() {
+			clearDragdropState();
+		}
+		function setupDragdrop(target, options) {
+			const board = resolveDragdropBoard(target);
+			if (!board) return null;
+			if (options !== void 0) dragdropOptions.set(board, Object.assign({}, dragdropOptions.get(board), options || {}));
+			else if (!dragdropOptions.has(board)) dragdropOptions.set(board, {});
+			board.querySelectorAll(dragdropItemSelector).forEach((item) => {
+				if (!item.hasAttribute("draggable")) item.setAttribute("draggable", "true");
+			});
+			if (wiredDragdropBoards.has(board)) return board;
+			wiredDragdropBoards.add(board);
+			listen(board, "dragstart", handleDragdropStart);
+			listen(board, "dragover", handleDragdropOver);
+			listen(board, "drop", handleDragdropDrop);
+			listen(board, "dragend", handleDragdropEnd);
+			return board;
+		}
+		legacy.dragdrop = { setup(target, options) {
+			return setupDragdrop(target, options);
+		} };
+		function resolveMultiselect(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolveMultiselect(target[0]);
+			if (typeof target === "string") return resolveMultiselect(document.querySelector(target));
+			if (!isElement(target)) return null;
+			if (isSelectElement(target) && target.matches("select[multiple]")) return target;
+			const rootElement = target.matches(".multiselect") ? target : target.closest(".multiselect");
+			return rootElement && isSelectElement(rootElement.previousElementSibling) ? rootElement.previousElementSibling : null;
+		}
+		function getMultiselectPlaceholder(select) {
+			return select.getAttribute("data-placeholder") || "Select options";
+		}
+		function getMultiselectName(select) {
+			const ariaLabel = select.getAttribute("aria-label");
+			if (ariaLabel) return ariaLabel;
+			if (!select.id) return "";
+			try {
+				const label = document.querySelector("label[for=\"" + CSS.escape(select.id) + "\"]");
+				return label && label.textContent ? label.textContent.trim() : "";
+			} catch (error) {
+				return "";
+			}
+		}
+		function getMultiselectSelectedOptions(select) {
+			return Array.from(select.options).filter((option) => option.selected);
+		}
+		function getMultiselectButtonText(select) {
+			const selectedOptions = getMultiselectSelectedOptions(select);
+			if (selectedOptions.length === 0) return getMultiselectPlaceholder(select);
+			if (selectedOptions.length <= 2) return selectedOptions.map((option) => option.text).join(", ");
+			return selectedOptions.length + " selected";
+		}
+		function getMultiselectOptions(rootElement) {
+			return Array.from(rootElement.querySelectorAll(".multiselect-option"));
+		}
+		function updateMultiselect(select) {
+			const state = multiselectMap.get(select);
+			if (!state) return select;
+			state.label.textContent = getMultiselectButtonText(select);
+			state.options.forEach((button, index) => {
+				const option = select.options[index];
+				button.setAttribute("aria-selected", option.selected ? "true" : "false");
+				button.setAttribute("aria-disabled", option.disabled ? "true" : "false");
+				button.disabled = option.disabled || select.disabled;
+			});
+			state.toggle.disabled = select.disabled;
+			return select;
+		}
+		function closeMultiselect(select) {
+			if (!select) return null;
+			const state = multiselectMap.get(select);
+			if (!state) return select;
+			state.root.classList.remove("is-open");
+			state.toggle.setAttribute("aria-expanded", "false");
+			return select;
+		}
+		function openMultiselect(select) {
+			if (!select) return null;
+			const state = multiselectMap.get(select);
+			if (!state || select.disabled) return select;
+			document.querySelectorAll(".multiselect.is-open").forEach((rootElement) => {
+				const currentSelect = rootElement.previousElementSibling;
+				if (isSelectElement(currentSelect) && currentSelect !== select) closeMultiselect(currentSelect);
+			});
+			state.root.classList.add("is-open");
+			state.toggle.setAttribute("aria-expanded", "true");
+			return select;
+		}
+		function toggleMultiselect(select) {
+			if (!select) return null;
+			const state = multiselectMap.get(select);
+			if (!state) return select;
+			return state.root.classList.contains("is-open") ? closeMultiselect(select) : openMultiselect(select);
+		}
+		function toggleMultiselectOption(select, index) {
+			const option = select.options[index];
+			if (!option || option.disabled || select.disabled) return;
+			option.selected = !option.selected;
+			updateMultiselect(select);
+			select.dispatchEvent(new Event("change", { bubbles: true }));
+		}
+		function focusMultiselectOption(rootElement, index) {
+			const option = getMultiselectOptions(rootElement).filter((option) => !option.disabled)[index];
+			if (option) option.focus();
+		}
+		function handleMultiselectClick(event) {
+			const select = resolveMultiselect(currentTargetElement(event));
+			const target = eventTargetElement(event);
+			const option = target ? target.closest(".multiselect-option") : null;
+			if (!select) return;
+			if (option) {
+				toggleMultiselectOption(select, Number(option.getAttribute("data-index")));
+				return;
+			}
+			if (target && target.closest(".multiselect-toggle")) toggleMultiselect(select);
+		}
+		function handleMultiselectKeydown(event) {
+			const select = resolveMultiselect(currentTargetElement(event));
+			const state = select ? multiselectMap.get(select) : null;
+			const target = eventTargetElement(event);
+			if (!state || !target || !select) return;
+			if (event.key === "Escape") {
+				closeMultiselect(select);
+				state.toggle.focus();
+				return;
+			}
+			if (event.target === state.toggle) {
+				if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					openMultiselect(select);
+					focusMultiselectOption(state.root, 0);
+				}
+				return;
+			}
+			const options = getMultiselectOptions(state.root).filter((option) => !option.disabled);
+			const currentIndex = options.indexOf(target);
+			if (currentIndex < 0) return;
+			if (event.key === "ArrowDown") {
+				event.preventDefault();
+				focusMultiselectOption(state.root, (currentIndex + 1) % options.length);
+			} else if (event.key === "ArrowUp") {
+				event.preventDefault();
+				focusMultiselectOption(state.root, (currentIndex - 1 + options.length) % options.length);
+			} else if (event.key === "Home") {
+				event.preventDefault();
+				focusMultiselectOption(state.root, 0);
+			} else if (event.key === "End") {
+				event.preventDefault();
+				focusMultiselectOption(state.root, options.length - 1);
+			} else if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				toggleMultiselectOption(select, Number(target.getAttribute("data-index")));
+			}
+		}
+		function handleDocumentMultiselectClick(event) {
+			const target = eventTargetElement(event);
+			if (!target) return;
+			document.querySelectorAll(".multiselect.is-open").forEach((rootElement) => {
+				if (!rootElement.contains(target)) closeMultiselect(isSelectElement(rootElement.previousElementSibling) ? rootElement.previousElementSibling : null);
+			});
+		}
+		function createMultiselectOption(option, index, rootId) {
+			const button = document.createElement("button");
+			button.className = "multiselect-option";
+			button.type = "button";
+			button.id = rootId + "-option-" + index;
+			button.setAttribute("role", "option");
+			button.setAttribute("data-index", String(index));
+			button.textContent = option.text;
+			return button;
+		}
+		function setupMultiselect(target) {
+			const select = resolveMultiselect(target);
+			if (!select || !select.matches("select[multiple]")) return null;
+			if (wiredMultiselects.has(select)) {
+				updateMultiselect(select);
+				return select;
+			}
+			const rootElement = document.createElement("div");
+			const toggle = document.createElement("button");
+			const label = document.createElement("span");
+			const menu = document.createElement("div");
+			const rootId = select.id || select.name || "multiselect-" + ++multiselectId;
+			const menuId = rootId + "-menu";
+			const options = Array.from(select.options).map((option, index) => createMultiselectOption(option, index, rootId));
+			rootElement.className = "multiselect";
+			toggle.className = "multiselect-toggle";
+			toggle.id = rootId + "-toggle";
+			toggle.type = "button";
+			toggle.setAttribute("aria-expanded", "false");
+			toggle.setAttribute("aria-haspopup", "listbox");
+			toggle.setAttribute("aria-controls", menuId);
+			label.className = "multiselect-label";
+			menu.className = "multiselect-menu";
+			menu.id = menuId;
+			menu.setAttribute("role", "listbox");
+			menu.setAttribute("aria-multiselectable", "true");
+			const name = getMultiselectName(select);
+			if (name) toggle.setAttribute("aria-label", name);
+			toggle.append(label);
+			if (options.length === 0) {
+				const empty = document.createElement("div");
+				empty.className = "multiselect-empty";
+				empty.textContent = "No options";
+				menu.append(empty);
+			} else options.forEach((option) => menu.append(option));
+			rootElement.append(toggle, menu);
+			select.classList.add("multiselect-source");
+			select.after(rootElement);
+			multiselectMap.set(select, {
+				label,
+				menu,
+				options,
+				root: rootElement,
+				toggle
+			});
+			wiredMultiselects.add(select);
+			rootElement.addEventListener("click", handleMultiselectClick);
+			rootElement.addEventListener("keydown", handleMultiselectKeydown);
+			select.addEventListener("change", () => updateMultiselect(select));
+			if (select.form) select.form.addEventListener("reset", () => {
+				setTimeout(() => updateMultiselect(select), 0);
+			});
+			updateMultiselect(select);
+			return select;
+		}
+		legacy.multiselect = {
+			setup(target) {
+				return setupMultiselect(target);
+			},
+			open(target) {
+				return openMultiselect(resolveMultiselect(target));
+			},
+			close(target) {
+				return closeMultiselect(resolveMultiselect(target));
+			},
+			toggle(target) {
+				return toggleMultiselect(resolveMultiselect(target));
+			}
+		};
+		function resolvePagination(target) {
+			if (!target) return null;
+			if (isLegacyCollection(target)) return resolvePagination(target[0]);
+			if (typeof target === "string") return document.querySelector(target);
+			if (isElement(target)) {
+				if (target.matches(paginationSelector)) return target;
+				return target.closest(paginationSelector);
+			}
+			return null;
+		}
+		function getPaginationNumber(value, fallback) {
+			const number = Number(value);
+			return Number.isFinite(number) && number > 0 ? number : fallback;
+		}
+		function getPaginationPageSizes(rootElement, options) {
+			const configured = options.pageSizes || rootElement.getAttribute("data-page-sizes") || rootElement.getAttribute("data-page-size-options");
+			const sizes = (Array.isArray(configured) ? configured : String(configured || "10,25,50").split(",")).map((value) => getPaginationNumber(value, 0)).filter((value, index, list) => value > 0 && list.indexOf(value) === index);
+			return sizes.length > 0 ? sizes : [
+				10,
+				25,
+				50
+			];
+		}
+		function getPaginationTarget(rootElement, options) {
+			if (options.target) return typeof options.target === "string" ? document.querySelector(options.target) : options.target instanceof Element ? options.target : null;
+			const selector = rootElement.getAttribute("data-target");
+			return selector ? document.querySelector(selector) : null;
+		}
+		function createPaginationResult(rootElement, options, state) {
+			if (typeof options.load === "function") return options.load.call(rootElement, {
+				page: state.page,
+				pageSize: state.pageSize,
+				offset: (state.page - 1) * state.pageSize
+			});
+			const data = Array.isArray(options.data) ? options.data : [];
+			const start = (state.page - 1) * state.pageSize;
+			return {
+				items: data.slice(start, start + state.pageSize),
+				total: data.length
+			};
+		}
+		function normalizePaginationResult(result, state) {
+			const payload = Array.isArray(result) ? {
+				items: result,
+				total: result.length
+			} : result && typeof result === "object" ? result : {};
+			const items = Array.isArray(payload.items) ? payload.items : [];
+			const total = getPaginationNumber(payload.total, items.length);
+			const pageCount = Math.max(1, Math.ceil(total / state.pageSize));
+			return {
+				items,
+				page: getPaginationNumber(payload.page, state.page),
+				pageCount,
+				pageSize: getPaginationNumber(payload.pageSize, state.pageSize),
+				total
+			};
+		}
+		function renderPaginationItem(item, index, options, state) {
+			if (typeof options.renderItem === "function") return options.renderItem(item, index, state);
+			const row = document.createElement("tr");
+			(item && typeof item === "object" ? Object.values(item) : [item]).forEach((value) => {
+				const cell = document.createElement("td");
+				cell.textContent = value == null ? "" : String(value);
+				row.append(cell);
+			});
+			return row;
+		}
+		function renderPaginationItems(rootElement, result) {
+			const options = paginationOptions.get(rootElement) || {};
+			const target = options.target;
+			if (!target) return;
+			target.replaceChildren();
+			result.items.forEach((item, index) => {
+				const rendered = renderPaginationItem(item, index, options, result);
+				if (typeof rendered === "string") target.insertAdjacentHTML("beforeend", rendered);
+				else if (rendered) target.append(rendered);
+			});
+		}
+		function getPaginationPages(currentPage, pageCount, maxPages) {
+			const pages = [];
+			if (pageCount <= maxPages) {
+				for (let page = 1; page <= pageCount; page += 1) pages.push(page);
+				return pages;
+			}
+			pages.push(1);
+			const sideCount = Math.max(1, Math.floor((maxPages - 3) / 2));
+			const start = Math.max(2, currentPage - sideCount);
+			const end = Math.min(pageCount - 1, currentPage + sideCount);
+			if (start > 2) pages.push("ellipsis-start");
+			for (let page = start; page <= end; page += 1) pages.push(page);
+			if (end < pageCount - 1) pages.push("ellipsis-end");
+			pages.push(pageCount);
+			return pages;
+		}
+		function createPaginationButton(label, action, disabled) {
+			const button = document.createElement("button");
+			button.type = "button";
+			button.setAttribute("data-pagination-action", action);
+			button.textContent = label;
+			button.disabled = disabled;
+			return button;
+		}
+		function renderPaginationControls(rootElement, result) {
+			const options = paginationOptions.get(rootElement) || {};
+			const pageCount = result.pageCount;
+			const page = Math.min(result.page, pageCount);
+			const maxPages = getPaginationNumber(options.maxPages, 7);
+			const summary = document.createElement("span");
+			const pages = document.createElement("span");
+			const size = document.createElement("span");
+			const label = document.createElement("label");
+			const select = document.createElement("select");
+			summary.className = "pagination-summary";
+			summary.textContent = "Page " + page + " of " + pageCount + " (" + result.total + " items)";
+			pages.className = "pagination-pages";
+			pages.setAttribute("role", "group");
+			pages.setAttribute("aria-label", "Pages");
+			pages.append(createPaginationButton("Previous", "previous", page <= 1));
+			getPaginationPages(page, pageCount, maxPages).forEach((pageNumber) => {
+				if (typeof pageNumber !== "number") {
+					const ellipsis = document.createElement("span");
+					ellipsis.className = "pagination-ellipsis";
+					ellipsis.setAttribute("aria-hidden", "true");
+					ellipsis.textContent = "...";
+					pages.append(ellipsis);
+					return;
+				}
+				const button = createPaginationButton(String(pageNumber), "page", false);
+				button.className = "pagination-page";
+				button.setAttribute("data-pagination-page", String(pageNumber));
+				button.setAttribute("aria-label", "Page " + pageNumber);
+				if (pageNumber === page) button.setAttribute("aria-current", "page");
+				pages.append(button);
+			});
+			pages.append(createPaginationButton("Next", "next", page >= pageCount));
+			size.className = "pagination-size";
+			label.textContent = "Page size";
+			(options.pageSizes || [result.pageSize]).forEach((pageSize) => {
+				const option = document.createElement("option");
+				option.value = String(pageSize);
+				option.textContent = String(pageSize);
+				option.selected = pageSize === result.pageSize;
+				select.append(option);
+			});
+			select.setAttribute("data-pagination-size", "");
+			label.append(select);
+			size.append(label);
+			rootElement.replaceChildren(summary, pages, size);
+		}
+		function setPaginationLoading(rootElement, loading) {
+			rootElement.setAttribute("aria-busy", loading ? "true" : "false");
+			rootElement.querySelectorAll("button, select").forEach((control) => {
+				control.disabled = loading;
+			});
+		}
+		function handlePaginationError(rootElement, state, request, error) {
+			if (request !== state.request) return;
+			if (state.result) renderPaginationControls(rootElement, state.result);
+			else setPaginationLoading(rootElement, false);
+			rootElement.dispatchEvent(new CustomEvent("pagination:error", {
+				bubbles: true,
+				detail: { error }
+			}));
+		}
+		function updatePagination(rootElement) {
+			const options = rootElement ? paginationOptions.get(rootElement) : null;
+			const state = rootElement ? paginationState.get(rootElement) : null;
+			if (!rootElement || !options || !state) return rootElement;
+			state.request += 1;
+			const request = state.request;
+			setPaginationLoading(rootElement, true);
+			try {
+				Promise.resolve(createPaginationResult(rootElement, options, state)).then((rawResult) => {
+					if (request !== state.request) return;
+					const result = normalizePaginationResult(rawResult, state);
+					state.page = Math.min(result.page, result.pageCount);
+					state.pageSize = result.pageSize;
+					state.result = result;
+					renderPaginationItems(rootElement, result);
+					renderPaginationControls(rootElement, result);
+					rootElement.dispatchEvent(new CustomEvent("pagination:change", {
+						bubbles: true,
+						detail: result
+					}));
+				}).catch((error) => {
+					handlePaginationError(rootElement, state, request, error);
+				});
+			} catch (error) {
+				handlePaginationError(rootElement, state, request, error);
+			}
+			return rootElement;
+		}
+		function setPaginationPage(rootElement, page) {
+			const state = rootElement ? paginationState.get(rootElement) : null;
+			if (!state) return null;
+			state.page = getPaginationNumber(page, state.page);
+			return updatePagination(rootElement);
+		}
+		function setPaginationPageSize(rootElement, pageSize) {
+			const state = rootElement ? paginationState.get(rootElement) : null;
+			if (!state) return null;
+			state.page = 1;
+			state.pageSize = getPaginationNumber(pageSize, state.pageSize);
+			return updatePagination(rootElement);
+		}
+		function handlePaginationClick(event) {
+			const rootElement = resolvePagination(currentTargetElement(event));
+			const target = eventTargetElement(event);
+			const button = target ? target.closest("[data-pagination-action]") : null;
+			const state = rootElement ? paginationState.get(rootElement) : null;
+			if (!button || !state || button.disabled) return;
+			const action = button.getAttribute("data-pagination-action");
+			if (action === "previous") setPaginationPage(rootElement, state.page - 1);
+			else if (action === "next") setPaginationPage(rootElement, state.page + 1);
+			else if (action === "page") setPaginationPage(rootElement, button.getAttribute("data-pagination-page"));
+		}
+		function handlePaginationChange(event) {
+			const target = eventTargetElement(event);
+			const rootElement = resolvePagination(currentTargetElement(event));
+			if (isSelectElement(target) && rootElement && target.matches("[data-pagination-size]")) setPaginationPageSize(rootElement, target.value);
+		}
+		function setupPagination(target, options = {}) {
+			const rootElement = resolvePagination(target);
+			if (!rootElement) return null;
+			const nextOptions = Object.assign({}, paginationOptions.get(rootElement), options || {});
+			nextOptions.target = getPaginationTarget(rootElement, nextOptions);
+			nextOptions.pageSizes = getPaginationPageSizes(rootElement, nextOptions);
+			nextOptions.pageSize = getPaginationNumber(nextOptions.pageSize || rootElement.getAttribute("data-page-size"), nextOptions.pageSizes[0]);
+			nextOptions.maxPages = getPaginationNumber(nextOptions.maxPages || rootElement.getAttribute("data-max-pages"), 7);
+			const normalizedOptions = {
+				data: nextOptions.data,
+				load: nextOptions.load,
+				maxPages: nextOptions.maxPages,
+				pageSize: nextOptions.pageSize,
+				pageSizes: nextOptions.pageSizes,
+				renderItem: nextOptions.renderItem,
+				target: isElement(nextOptions.target) ? nextOptions.target : null
+			};
+			paginationOptions.set(rootElement, normalizedOptions);
+			if (paginationState.has(rootElement)) {
+				const state = paginationState.get(rootElement);
+				if (state && options.pageSize) {
+					state.page = 1;
+					state.pageSize = nextOptions.pageSize;
+				}
+			} else paginationState.set(rootElement, {
+				page: getPaginationNumber(rootElement.getAttribute("data-page"), 1),
+				pageSize: nextOptions.pageSize,
+				request: 0
+			});
+			if (!wiredPaginations.has(rootElement)) {
+				wiredPaginations.add(rootElement);
+				listen(rootElement, "click", handlePaginationClick);
+				listen(rootElement, "change", handlePaginationChange);
+			}
+			updatePagination(rootElement);
+			return rootElement;
+		}
+		legacy.pagination = {
+			setup(target, options) {
+				return setupPagination(target, options);
+			},
+			goTo(target, page) {
+				return setPaginationPage(resolvePagination(target), page);
+			},
+			pageSize(target, pageSize) {
+				return setPaginationPageSize(resolvePagination(target), pageSize);
+			},
+			refresh(target) {
+				return updatePagination(resolvePagination(target));
+			}
+		};
+		document.addEventListener("DOMContentLoaded", function() {
+			document.querySelectorAll(popoverTriggerSelector).forEach(setupPopover);
+			document.querySelectorAll("[data-tabs], .tabs").forEach(setupTabs);
+			document.querySelectorAll(dragdropBoardSelector).forEach((board) => {
+				setupDragdrop(board);
+			});
+			document.querySelectorAll(multiselectSelector).forEach(setupMultiselect);
+			document.querySelectorAll("[data-pagination]").forEach((rootElement) => {
+				setupPagination(rootElement);
+			});
+		});
+		document.addEventListener("click", handleDocumentMultiselectClick);
+		document.addEventListener("click", handleDocumentPopoverClick);
+		document.addEventListener("keydown", handleDocumentPopoverKeydown);
+		window.addEventListener("resize", updateOpenPopoverPosition);
+		window.addEventListener("scroll", updateOpenPopoverPosition, true);
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.modal) root.jQuery.fn.modal = function(action) {
+			const method = action || "open";
+			return this.each(function() {
+				if (method === "close") {
+					legacy.modal.close(this);
+					return;
+				}
+				if (method === "toggle") {
+					legacy.modal.toggle(this);
+					return;
+				}
+				legacy.modal.open(this);
+			});
+		};
+		if (root.jQuery && !root.jQuery.toast) root.jQuery.toast = function(message, options) {
+			return legacy.toast.show(message, options);
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.toast) root.jQuery.fn.toast = function(action) {
+			return this.each(function() {
+				if (action === "close") {
+					legacy.toast.close(this);
+					return;
+				}
+				legacy.toast.show(this, typeof action === "object" ? action : void 0);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.tabs) root.jQuery.fn.tabs = function(action, index) {
+			return this.each(function() {
+				if (action === "select" && index !== void 0) {
+					legacy.tabs.select(this, index);
+					return;
+				}
+				legacy.tabs.setup(this);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.popover) root.jQuery.fn.popover = function(action) {
+			return this.each(function() {
+				if (action === "open") {
+					legacy.popover.open(this);
+					return;
+				}
+				if (action === "close") {
+					legacy.popover.close(this);
+					return;
+				}
+				if (action === "toggle") {
+					legacy.popover.toggle(this);
+					return;
+				}
+				legacy.popover.setup(this);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.dragdrop) root.jQuery.fn.dragdrop = function(options) {
+			return this.each(function() {
+				legacy.dragdrop.setup(this, options);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.multiselect) root.jQuery.fn.multiselect = function(action) {
+			return this.each(function() {
+				if (action === "open") {
+					legacy.multiselect.open(this);
+					return;
+				}
+				if (action === "close") {
+					legacy.multiselect.close(this);
+					return;
+				}
+				if (action === "toggle") {
+					legacy.multiselect.toggle(this);
+					return;
+				}
+				legacy.multiselect.setup(this);
+			});
+		};
+		if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.pagination) root.jQuery.fn.pagination = function(action, value) {
+			return this.each(function() {
+				if (action === "goTo" && value !== void 0) {
+					legacy.pagination.goTo(this, value);
+					return;
+				}
+				if (action === "pageSize" && value !== void 0) {
+					legacy.pagination.pageSize(this, value);
+					return;
+				}
+				if (action === "refresh") {
+					legacy.pagination.refresh(this);
+					return;
+				}
+				legacy.pagination.setup(this, typeof action === "object" ? action : void 0);
+			});
+		};
+	})();
+	//#endregion
 })();

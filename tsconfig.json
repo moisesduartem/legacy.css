@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "lib": ["DOM", "ES2022"],
+    "module": "ESNext",
+    "noEmit": true,
+    "strict": true,
+    "target": "ES2022"
+  },
+  "include": ["src/legacy.ts"]
+}

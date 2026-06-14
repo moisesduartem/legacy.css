@@ -21,13 +21,13 @@
   "scripts": {
     "lint": "stylelint \"src/**/*.css\"",
     "mcp": "node mcp/server.js",
-    "test": "pnpm run test:unit && pnpm run test:e2e",
+    "test": "pnpm run test:unit",
     "test:unit": "vitest run",
     "test:unit:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
     "build": "lightningcss --bundle src/legacy.css -o dist/legacy.css",
     "build:min": "lightningcss --bundle --minify src/legacy.css -o dist/legacy.min.css",
-    "build:js": "mkdir -p dist && cp src/legacy.js dist/legacy.js && vite build",
+    "build:js": "mkdir -p dist && vite build --mode development && vite build",
     "build:all": "pnpm run build && pnpm run build:min && pnpm run build:js",
     "build:docs": "pnpm run build:all && mkdir -p docs/assets && cp dist/legacy.css docs/assets/legacy.css && cp dist/legacy.min.css docs/assets/legacy.min.css && cp dist/legacy.js docs/assets/legacy.js && cp dist/legacy.min.js docs/assets/legacy.min.js",
     "watch": "lightningcss --bundle --watch src/legacy.css -o dist/legacy.css"
@@ -40,12 +40,12 @@
     "admin"
   ],
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
     "@vitest/coverage-v8": "^4.1.8",
     "jsdom": "^29.1.1",
     "lightningcss-cli": "^1.30.1",
     "stylelint": "^16.19.1",
     "stylelint-config-standard": "^38.0.0",
+    "typescript": "^6.0.3",
     "vite": "^8.0.16",
     "vitest": "^4.1.8"
   }

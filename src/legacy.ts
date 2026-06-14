@@ -1,21 +1,201 @@
+type LegacyTarget<T extends Element = Element> =
+  | string
+  | T
+  | { 0?: T; jquery?: unknown; nodeType?: number }
+  | null
+  | undefined;
+
+type LegacyRequiredApi = {
+  [Key in keyof LegacyCssApi]-?: LegacyCssApi[Key];
+};
+
+type LegacyFocusableElement = HTMLElement | SVGElement;
+type LegacyPageToken = number | "ellipsis-start" | "ellipsis-end";
+type LegacyPaginationAction = "previous" | "next" | "page";
+
+interface LegacyDragdropState {
+  board: Element;
+  item: Element;
+  fromColumn: Element;
+  fromIndex: number;
+}
+
+interface LegacyMultiselectState {
+  label: HTMLSpanElement;
+  menu: HTMLDivElement;
+  options: HTMLButtonElement[];
+  root: HTMLDivElement;
+  toggle: HTMLButtonElement;
+}
+
+interface LegacyCloseEvent {
+  currentTarget: HTMLDialogElement;
+}
+
+type LegacyToastType = "info" | "success" | "warning" | "danger" | "muted";
+type LegacyToastPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+type LegacyPopoverPlacement = "top" | "right" | "bottom" | "left";
+
+const legacyToastPositions: LegacyToastPosition[] = ["top-left", "top-right", "bottom-left", "bottom-right"];
+const legacyPopoverPlacements: LegacyPopoverPlacement[] = ["top", "right", "bottom", "left"];
+
+interface LegacyToastOptions {
+  closeLabel?: string;
+  closeText?: string;
+  container?: LegacyTarget;
+  dismissible?: boolean;
+  duration?: number;
+  message?: string | Node;
+  position?: LegacyToastPosition;
+  title?: string;
+  type?: LegacyToastType;
+}
+
+type LegacyToastInput = LegacyToastOptions | string | Node | null | undefined;
+
+interface LegacyDragdropPayload {
+  board: Element;
+  item: Element;
+  fromColumn: Element;
+  toColumn: Element | null;
+  fromColumnId: string | null;
+  toColumnId: string | null;
+  fromIndex: number;
+  toIndex: number;
+  originalEvent: Event;
+}
+
+interface LegacyDragdropOptions {
+  onChangeColumn?: (this: Element, payload: LegacyDragdropPayload) => void;
+  onDrag?: (this: Element, payload: LegacyDragdropPayload | null) => void;
+  onDrop?: (this: Element, payload: LegacyDragdropPayload) => void;
+}
+
+interface LegacyPaginationState {
+  page: number;
+  pageSize: number;
+  request: number;
+  result?: LegacyPaginationResult;
+}
+
+interface LegacyPaginationResult {
+  items: unknown[];
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
+}
+
+interface LegacyPaginationOptions {
+  data?: unknown[];
+  load?: (this: Element, state: { page: number; pageSize: number; offset: number }) => Promise<unknown> | unknown;
+  maxPages?: number;
+  pageSize?: number;
+  pageSizes?: number[];
+  renderItem?: (
+    item: unknown,
+    index: number,
+    state: LegacyPaginationResult
+  ) => Element | DocumentFragment | string | null | undefined;
+  target?: Element | null;
+}
+
+interface LegacyPaginationSetupOptions extends Omit<LegacyPaginationOptions, "pageSizes" | "target"> {
+  pageSizes?: number[] | string;
+  target?: LegacyTarget | Element | null;
+}
+
+interface LegacyPaginationPayload {
+  items?: unknown;
+  page?: unknown;
+  pageCount?: unknown;
+  pageSize?: unknown;
+  total?: unknown;
+}
+
+interface LegacyCssApi {
+  dragdrop?: {
+    setup(target: LegacyTarget, options?: LegacyDragdropOptions): Element | null;
+  };
+  modal?: {
+    close(target: LegacyTarget<HTMLDialogElement>, returnValue?: string): HTMLDialogElement | null;
+    open(target: LegacyTarget<HTMLDialogElement>): HTMLDialogElement | null;
+    toggle(target: LegacyTarget<HTMLDialogElement>): HTMLDialogElement | null;
+  };
+  multiselect?: {
+    close(target: LegacyTarget): HTMLSelectElement | null;
+    open(target: LegacyTarget): HTMLSelectElement | null;
+    setup(target: LegacyTarget): HTMLSelectElement | null;
+    toggle(target: LegacyTarget): HTMLSelectElement | null;
+  };
+  pagination?: {
+    goTo(target: LegacyTarget, page: number | string): Element | null;
+    pageSize(target: LegacyTarget, pageSize: number | string): Element | null;
+    refresh(target: LegacyTarget): Element | null;
+    setup(target: LegacyTarget, options?: LegacyPaginationSetupOptions): Element | null;
+  };
+  popover?: {
+    close(target: LegacyTarget): Element | null;
+    open(target: LegacyTarget): Element | null;
+    setup(target: LegacyTarget): Element | null;
+    toggle(target: LegacyTarget): Element | null;
+  };
+  tabs?: {
+    select(target: LegacyTarget, index: number | string): Element | null;
+    setup(target: LegacyTarget): Element | null;
+  };
+  toast?: {
+    clear(target?: LegacyTarget): Element[];
+    close(target: LegacyTarget): Element | null;
+    show(message: LegacyToastInput, options?: LegacyToastOptions): HTMLElement | null;
+  };
+}
+
+interface LegacyJQueryCollection {
+  each(callback: (this: Element) => void): LegacyJQueryCollection;
+  dragdrop?: (options?: LegacyDragdropOptions) => LegacyJQueryCollection;
+  modal?: (action?: string) => LegacyJQueryCollection;
+  multiselect?: (action?: string) => LegacyJQueryCollection;
+  pagination?: (action?: string | LegacyPaginationSetupOptions, value?: number | string) => LegacyJQueryCollection;
+  popover?: (action?: string) => LegacyJQueryCollection;
+  tabs?: (action?: string, index?: number | string) => LegacyJQueryCollection;
+  toast?: (action?: string | LegacyToastOptions) => LegacyJQueryCollection;
+}
+
+interface LegacyJQuery {
+  (target?: unknown): LegacyJQueryCollection;
+  fn?: LegacyJQueryCollection;
+  toast?: (message: LegacyToastInput, options?: LegacyToastOptions) => HTMLElement | null;
+}
+
+interface Window {
+  LegacyCss?: LegacyCssApi;
+  jQuery?: LegacyJQuery;
+}
+
 (function () {
   const root = window;
-  const legacy = root.LegacyCss || (root.LegacyCss = {});
-  const openDialogs = [];
-  const openerMap = new WeakMap();
-  const fallbackDialogs = new WeakSet();
-  const wiredDialogs = new WeakSet();
-  const wiredTabs = new WeakSet();
-  const wiredPopoverTriggers = new WeakSet();
-  const wiredDragdropBoards = new WeakSet();
-  const wiredMultiselects = new WeakSet();
-  const wiredPaginations = new WeakSet();
-  const multiselectMap = new WeakMap();
-  const dragdropOptions = new WeakMap();
-  const paginationOptions = new WeakMap();
-  const paginationState = new WeakMap();
-  const toastTimers = new WeakMap();
-  const supportsNativeDialog = (dialog) => typeof dialog.showModal === "function";
+
+  if (!root.LegacyCss) {
+    root.LegacyCss = {};
+  }
+
+  const legacy = root.LegacyCss as LegacyRequiredApi;
+  const openDialogs: HTMLDialogElement[] = [];
+  const openerMap = new WeakMap<HTMLDialogElement, HTMLElement | null>();
+  const fallbackDialogs = new WeakSet<HTMLDialogElement>();
+  const wiredDialogs = new WeakSet<HTMLDialogElement>();
+  const wiredTabs = new WeakSet<Element>();
+  const wiredPopoverTriggers = new WeakSet<Element>();
+  const wiredDragdropBoards = new WeakSet<Element>();
+  const wiredMultiselects = new WeakSet<HTMLSelectElement>();
+  const wiredPaginations = new WeakSet<Element>();
+  const multiselectMap = new WeakMap<HTMLSelectElement, LegacyMultiselectState>();
+  const dragdropOptions = new WeakMap<Element, LegacyDragdropOptions>();
+  const paginationOptions = new WeakMap<Element, LegacyPaginationOptions>();
+  const paginationState = new WeakMap<Element, LegacyPaginationState>();
+  const toastTimers = new WeakMap<Element, number>();
+  const supportsNativeDialog = (dialog: HTMLDialogElement): boolean => typeof dialog.showModal === "function";
   const dragdropBoardSelector = "[data-dragdrop], .dragdrop";
   const dragdropColumnSelector = "[data-dragdrop-column], .dragdrop-column";
   const dragdropItemSelector = "[data-dragdrop-item], .dragdrop-item";
@@ -26,9 +206,9 @@
   let scrollLockCount = 0;
   let previousBodyOverflow = "";
   let previousHtmlOverflow = "";
-  let dragdropState = null;
+  let dragdropState: LegacyDragdropState | null = null;
   let multiselectId = 0;
-  let openPopoverTrigger = null;
+  let openPopoverTrigger: Element | null = null;
 
   const focusableSelector = [
     'a[href]',
@@ -39,12 +219,49 @@
     '[tabindex]:not([tabindex="-1"])',
   ].join(", ");
 
-  function resolveDialog(target) {
+  function isLegacyCollection<T extends Element>(target: LegacyTarget<T>): target is { 0?: T; jquery?: unknown } {
+    return typeof target === "object" && target !== null && "jquery" in target;
+  }
+
+  function isElement(target: unknown): target is Element {
+    return (
+      typeof target === "object" &&
+      target !== null &&
+      "nodeType" in target &&
+      (target as { nodeType: number }).nodeType === 1
+    );
+  }
+
+  function isSelectElement(target: unknown): target is HTMLSelectElement {
+    return isElement(target) && target.nodeName === "SELECT";
+  }
+
+  function eventTargetElement(event: Event): Element | null {
+    return isElement(event.target) ? event.target : null;
+  }
+
+  function currentTargetElement(event: Event): Element | null {
+    return isElement(event.currentTarget) ? event.currentTarget : null;
+  }
+
+  function listen(target: EventTarget, type: string, listener: EventListener): void {
+    target.addEventListener(type, listener);
+  }
+
+  function isToastPosition(position: unknown): position is LegacyToastPosition {
+    return typeof position === "string" && legacyToastPositions.includes(position as LegacyToastPosition);
+  }
+
+  function isPopoverPlacement(placement: unknown): placement is LegacyPopoverPlacement {
+    return typeof placement === "string" && legacyPopoverPlacements.includes(placement as LegacyPopoverPlacement);
+  }
+
+  function resolveDialog(target: LegacyTarget<HTMLDialogElement>): HTMLDialogElement | null {
     if (!target) {
       return null;
     }
 
-    if (target.jquery) {
+    if (isLegacyCollection(target)) {
       return resolveDialog(target[0]);
     }
 
@@ -56,18 +273,18 @@
       return target;
     }
 
-    if (target.nodeType === 1 && target.nodeName === "DIALOG") {
-      return target;
+    if (isElement(target) && target.nodeName === "DIALOG") {
+      return target as HTMLDialogElement;
     }
 
     return null;
   }
 
-  function getFocusableElement(dialog) {
+  function getFocusableElement(dialog: HTMLDialogElement): LegacyFocusableElement | null {
     return dialog.querySelector("[autofocus], [data-modal-autofocus], " + focusableSelector);
   }
 
-  function focusDialog(dialog) {
+  function focusDialog(dialog: HTMLDialogElement): void {
     const focusTarget = getFocusableElement(dialog);
 
     if (focusTarget) {
@@ -90,7 +307,7 @@
     }
   }
 
-  function lockScroll() {
+  function lockScroll(): void {
     if (scrollLockCount > 0) {
       scrollLockCount += 1;
       return;
@@ -103,7 +320,7 @@
     scrollLockCount = 1;
   }
 
-  function unlockScroll() {
+  function unlockScroll(): void {
     if (scrollLockCount === 0) {
       return;
     }
@@ -118,7 +335,7 @@
     document.documentElement.style.overflow = previousHtmlOverflow;
   }
 
-  function removeFromOpenDialogs(dialog) {
+  function removeFromOpenDialogs(dialog: HTMLDialogElement): void {
     const index = openDialogs.indexOf(dialog);
 
     if (index >= 0) {
@@ -126,7 +343,7 @@
     }
   }
 
-  function restoreFocus(dialog) {
+  function restoreFocus(dialog: HTMLDialogElement): void {
     const opener = openerMap.get(dialog);
 
     if (opener && typeof opener.focus === "function" && document.contains(opener)) {
@@ -140,8 +357,8 @@
     openerMap.delete(dialog);
   }
 
-  function handleClose(event) {
-    const dialog = event.currentTarget;
+  function handleClose(event: Event | LegacyCloseEvent): void {
+    const dialog = event.currentTarget as HTMLDialogElement;
 
     removeFromOpenDialogs(dialog);
     dialog.removeAttribute("aria-modal");
@@ -157,7 +374,7 @@
     }
   }
 
-  function closeDialogElement(dialog, returnValue = "") {
+  function closeDialogElement(dialog: HTMLDialogElement | null, returnValue = ""): HTMLDialogElement | null {
     if (!dialog) {
       return null;
     }
@@ -176,21 +393,21 @@
     return dialog;
   }
 
-  function handleBackdropClick(event) {
-    const dialog = event.currentTarget;
-    const target = event.target;
+  function handleBackdropClick(event: MouseEvent): void {
+    const dialog = event.currentTarget as HTMLDialogElement;
+    const target = eventTargetElement(event);
 
     if (target === dialog) {
       closeDialogElement(dialog);
       return;
     }
 
-    if (target.closest && target.closest("[data-modal-close]")) {
+    if (target && target.closest("[data-modal-close]")) {
       closeDialogElement(dialog);
     }
   }
 
-  function handleKeydown(event) {
+  function handleKeydown(event: KeyboardEvent): void {
     if (event.key !== "Escape") {
       return;
     }
@@ -205,7 +422,7 @@
     closeDialogElement(dialog);
   }
 
-  function wireDialog(dialog) {
+  function wireDialog(dialog: HTMLDialogElement): void {
     if (wiredDialogs.has(dialog)) {
       return;
     }
@@ -215,7 +432,7 @@
     dialog.addEventListener("click", handleBackdropClick);
   }
 
-  function openDialogElement(dialog) {
+  function openDialogElement(dialog: HTMLDialogElement | null): HTMLDialogElement | null {
     if (!dialog) {
       return null;
     }
@@ -254,7 +471,7 @@
     return dialog;
   }
 
-  function toggleDialogElement(dialog) {
+  function toggleDialogElement(dialog: HTMLDialogElement | null): HTMLDialogElement | null {
     if (!dialog) {
       return null;
     }
@@ -274,12 +491,12 @@
     },
   };
 
-  function resolveToast(target) {
+  function resolveToast(target: LegacyTarget): Element | null {
     if (!target) {
       return null;
     }
 
-    if (target.jquery) {
+    if (isLegacyCollection(target)) {
       return resolveToast(target[0]);
     }
 
@@ -287,24 +504,22 @@
       return document.querySelector(target);
     }
 
-    if (target.nodeType === 1 && target.matches(".toast, [data-toast]")) {
+    if (isElement(target) && target.matches(".toast, [data-toast]")) {
       return target;
     }
 
     return null;
   }
 
-  function normalizeToastPosition(position) {
-    return ["top-left", "top-right", "bottom-left", "bottom-right"].includes(
-      position
-    )
+  function normalizeToastPosition(position: unknown): LegacyToastPosition {
+    return isToastPosition(position)
       ? position
       : "bottom-right";
   }
 
-  function getToastRegion(position) {
+  function getToastRegion(position: unknown): HTMLElement {
     const normalizedPosition = normalizeToastPosition(position);
-    let region = document.querySelector(
+    let region = document.querySelector<HTMLElement>(
       '[data-toast-region][data-position="' +
         normalizedPosition +
         '"], .toast-region[data-position="' +
@@ -327,22 +542,22 @@
     return region;
   }
 
-  function normalizeToastOptions(message, options) {
-    if (message && typeof message === "object" && !message.nodeType && !message.jquery) {
+  function normalizeToastOptions(message: LegacyToastInput, options?: LegacyToastOptions): LegacyToastOptions {
+    if (message && typeof message === "object" && !("nodeType" in message) && !("jquery" in message)) {
       return Object.assign({}, message);
     }
 
     return Object.assign({}, options, {
-      message: message && message.jquery ? message[0] : message,
+      message: isLegacyCollection(message as LegacyTarget) ? (message as { 0?: Node })[0] : message,
     });
   }
 
-  function resolveToastContainer(target) {
+  function resolveToastContainer(target: LegacyTarget): Element | Document | null {
     if (!target) {
       return null;
     }
 
-    if (target.jquery) {
+    if (isLegacyCollection(target)) {
       return resolveToastContainer(target[0]);
     }
 
@@ -350,14 +565,14 @@
       return document.querySelector(target);
     }
 
-    if (target.nodeType === 1) {
+    if (isElement(target)) {
       return target;
     }
 
     return null;
   }
 
-  function setToastContent(toast, options) {
+  function setToastContent(toast: HTMLElement, options: LegacyToastOptions): void {
     const body = document.createElement("div");
     body.className = "toast-body";
 
@@ -368,7 +583,7 @@
       body.append(title);
     }
 
-    if (options.message && options.message.nodeType) {
+    if (options.message && typeof options.message === "object" && "nodeType" in options.message) {
       body.append(options.message);
     } else {
       const message = document.createElement("span");
@@ -379,7 +594,7 @@
     toast.append(body);
   }
 
-  function closeToastElement(toast) {
+  function closeToastElement(toast: Element | null): Element | null {
     if (!toast) {
       return null;
     }
@@ -397,11 +612,10 @@
     return toast;
   }
 
-  function showToast(message, options) {
+  function showToast(message: LegacyToastInput, options?: LegacyToastOptions): HTMLElement | null {
     const nextOptions = normalizeToastOptions(message, options);
-    const type = ["info", "success", "warning", "danger", "muted"].includes(
-      nextOptions.type
-    )
+    const type: LegacyToastType = nextOptions.type &&
+      ["info", "success", "warning", "danger", "muted"].includes(nextOptions.type)
       ? nextOptions.type
       : "info";
     const region = nextOptions.container
@@ -455,11 +669,11 @@
     return toast;
   }
 
-  function clearToasts(target) {
+  function clearToasts(target?: LegacyTarget): Element[] {
     const rootElement = target
       ? resolveToastContainer(target)
       : document;
-    const toasts = rootElement
+    const toasts: Element[] = rootElement
       ? Array.from(rootElement.querySelectorAll(".toast, [data-toast]"))
       : [];
 
@@ -480,23 +694,23 @@
     },
   };
 
-  function resolveElement(target) {
+  function resolveElement(target: LegacyTarget): Element | null {
     if (!target) {
       return null;
     }
 
-    if (target.jquery) {
+    if (isLegacyCollection(target)) {
       return resolveElement(target[0]);
     }
 
     if (typeof target === "string") {
-      return document.querySelector(target);
+      return document.querySelector<HTMLElement>(target);
     }
 
-    return target.nodeType === 1 ? target : null;
+    return isElement(target) ? target : null;
   }
 
-  function resolvePopoverTrigger(target) {
+  function resolvePopoverTrigger(target: LegacyTarget): Element | null {
     const element = resolveElement(target);
 
     if (!element) {
@@ -510,7 +724,7 @@
     return element.closest(popoverTriggerSelector);
   }
 
-  function resolvePopover(target) {
+  function resolvePopover(target: LegacyTarget): Element | null {
     const element = resolveElement(target);
 
     if (!element) {
@@ -526,7 +740,7 @@
     return trigger ? getTriggerPopover(trigger) : null;
   }
 
-  function getTriggerPopover(trigger) {
+  function getTriggerPopover(trigger: Element): HTMLElement | null {
     const target =
       trigger.getAttribute("data-popover-target") ||
       trigger.getAttribute("data-popover") ||
@@ -543,15 +757,15 @@
     return document.getElementById(target);
   }
 
-  function getPopoverPlacement(trigger) {
+  function getPopoverPlacement(trigger: Element): LegacyPopoverPlacement {
     const placement = trigger.getAttribute("data-popover-placement");
 
-    return ["top", "right", "bottom", "left"].includes(placement)
+    return isPopoverPlacement(placement)
       ? placement
       : "bottom";
   }
 
-  function positionPopover(trigger, popover) {
+  function positionPopover(trigger: Element, popover: HTMLElement): void {
     const gap = 4;
     const margin = 8;
     const placement = getPopoverPlacement(trigger);
@@ -584,7 +798,7 @@
     popover.style.left = left + "px";
   }
 
-  function closePopover(trigger) {
+  function closePopover(trigger?: Element | null): HTMLElement | null {
     const currentTrigger = trigger || openPopoverTrigger;
     const popover = currentTrigger ? getTriggerPopover(currentTrigger) : null;
 
@@ -602,7 +816,7 @@
     return popover;
   }
 
-  function openPopover(trigger) {
+  function openPopover(trigger: Element | null): HTMLElement | null {
     const popover = trigger ? getTriggerPopover(trigger) : null;
 
     if (!trigger || !popover) {
@@ -622,7 +836,7 @@
     return popover;
   }
 
-  function togglePopover(trigger) {
+  function togglePopover(trigger: Element | null): HTMLElement | null {
     const popover = trigger ? getTriggerPopover(trigger) : null;
 
     if (!popover) {
@@ -632,17 +846,21 @@
     return popover.hidden ? openPopover(trigger) : closePopover(trigger);
   }
 
-  function handlePopoverClick(event) {
+  function handlePopoverClick(event: Event): void {
     event.preventDefault();
-    togglePopover(event.currentTarget);
+    togglePopover(currentTargetElement(event));
   }
 
-  function handlePopoverKeydown(event) {
+  function handlePopoverKeydown(event: KeyboardEvent): void {
     if (event.key !== "Escape") {
       return;
     }
 
-    const trigger = event.currentTarget;
+    const trigger = currentTargetElement(event);
+
+    if (!trigger) {
+      return;
+    }
     const popover = getTriggerPopover(trigger);
 
     if (!popover || popover.hidden) {
@@ -651,19 +869,27 @@
 
     event.preventDefault();
     closePopover(trigger);
-    trigger.focus();
+    if (trigger instanceof HTMLElement) {
+      trigger.focus();
+    }
   }
 
-  function handleDocumentPopoverClick(event) {
+  function handleDocumentPopoverClick(event: MouseEvent): void {
     if (!openPopoverTrigger) {
+      return;
+    }
+
+    const target = eventTargetElement(event);
+
+    if (!target) {
       return;
     }
 
     const popover = getTriggerPopover(openPopoverTrigger);
 
     if (
-      openPopoverTrigger.contains(event.target) ||
-      (popover && popover.contains(event.target))
+      openPopoverTrigger.contains(target) ||
+      (popover && popover.contains(target))
     ) {
       return;
     }
@@ -671,7 +897,7 @@
     closePopover(openPopoverTrigger);
   }
 
-  function handleDocumentPopoverKeydown(event) {
+  function handleDocumentPopoverKeydown(event: KeyboardEvent): void {
     if (event.key !== "Escape" || !openPopoverTrigger) {
       return;
     }
@@ -680,7 +906,7 @@
     closePopover(openPopoverTrigger);
   }
 
-  function updateOpenPopoverPosition() {
+  function updateOpenPopoverPosition(): void {
     if (!openPopoverTrigger) {
       return;
     }
@@ -692,7 +918,7 @@
     }
   }
 
-  function wirePopoverTrigger(trigger) {
+  function wirePopoverTrigger(trigger: Element): Element {
     const popover = getTriggerPopover(trigger);
 
     if (!popover) {
@@ -700,7 +926,7 @@
     }
 
     if (!popover.id && trigger.getAttribute("data-popover-target")) {
-      popover.id = trigger.getAttribute("data-popover-target").replace(/^#/, "");
+      popover.id = (trigger.getAttribute("data-popover-target") || "").replace(/^#/, "");
     }
 
     trigger.setAttribute("aria-haspopup", "dialog");
@@ -716,14 +942,14 @@
 
     if (!wiredPopoverTriggers.has(trigger)) {
       wiredPopoverTriggers.add(trigger);
-      trigger.addEventListener("click", handlePopoverClick);
-      trigger.addEventListener("keydown", handlePopoverKeydown);
+      listen(trigger, "click", handlePopoverClick);
+      listen(trigger, "keydown", handlePopoverKeydown as EventListener);
     }
 
     return trigger;
   }
 
-  function setupPopover(target) {
+  function setupPopover(target: LegacyTarget): Element | null {
     const trigger = resolvePopoverTrigger(target);
 
     return trigger ? wirePopoverTrigger(trigger) : null;
@@ -754,12 +980,12 @@
     },
   };
 
-  function resolveTabs(target) {
+  function resolveTabs(target: LegacyTarget): Element | null {
     if (!target) {
       return null;
     }
 
-    if (target.jquery) {
+    if (isLegacyCollection(target)) {
       return resolveTabs(target[0]);
     }
 
@@ -767,7 +993,7 @@
       return document.querySelector(target);
     }
 
-    if (target.nodeType === 1) {
+    if (isElement(target)) {
       if (target.matches("[data-tabs], .tabs")) {
         return target;
       }
@@ -778,7 +1004,7 @@
     return null;
   }
 
-  function getTabs(rootElement) {
+  function getTabs(rootElement: Element): Element[] {
     const tabList = Array.from(rootElement.children).find((element) =>
       element.matches('[role="tablist"], .tabs-list')
     );
@@ -792,13 +1018,13 @@
     );
   }
 
-  function getTabPanels(rootElement) {
+  function getTabPanels(rootElement: Element): HTMLElement[] {
     return Array.from(rootElement.children).filter((element) =>
       element.matches('[role="tabpanel"]')
-    );
+    ) as HTMLElement[];
   }
 
-  function getTabPanel(rootElement, tab) {
+  function getTabPanel(rootElement: Element, tab: Element): HTMLElement | null {
     const panelId = tab.getAttribute("aria-controls");
 
     if (!panelId) {
@@ -812,7 +1038,7 @@
     }
   }
 
-  function selectTab(tab, setFocus) {
+  function selectTab(tab: Element | null, setFocus: boolean): Element | null {
     const rootElement = resolveTabs(tab);
 
     if (!rootElement || !tab) {
@@ -831,14 +1057,14 @@
       }
     });
 
-    if (setFocus) {
+    if (setFocus && tab instanceof HTMLElement) {
       tab.focus();
     }
 
     return tab;
   }
 
-  function selectTabByIndex(rootElement, index, setFocus) {
+  function selectTabByIndex(rootElement: Element, index: number, setFocus: boolean): Element | null {
     const tabs = getTabs(rootElement);
     const tab = tabs[index];
 
@@ -849,18 +1075,25 @@
     return selectTab(tab, setFocus);
   }
 
-  function handleTabClick(event) {
-    const tab = event.target.closest('[role="tab"]');
+  function handleTabClick(event: MouseEvent): void {
+    const target = eventTargetElement(event);
+    const tab = target ? target.closest('[role="tab"]') : null;
 
     if (tab) {
       selectTab(tab, false);
     }
   }
 
-  function handleTabKeydown(event) {
-    const rootElement = resolveTabs(event.currentTarget);
+  function handleTabKeydown(event: KeyboardEvent): void {
+    const rootElement = resolveTabs(currentTargetElement(event));
+    const target = eventTargetElement(event);
+
+    if (!rootElement || !target) {
+      return;
+    }
+
     const tabs = getTabs(rootElement);
-    const currentIndex = tabs.indexOf(event.target);
+    const currentIndex = tabs.indexOf(target);
 
     if (currentIndex < 0) {
       return;
@@ -884,7 +1117,7 @@
     selectTabByIndex(rootElement, nextIndex, true);
   }
 
-  function setupTabs(target) {
+  function setupTabs(target: LegacyTarget): Element | null {
     const rootElement = resolveTabs(target);
 
     if (!rootElement || wiredTabs.has(rootElement)) {
@@ -892,8 +1125,8 @@
     }
 
     wiredTabs.add(rootElement);
-    rootElement.addEventListener("click", handleTabClick);
-    rootElement.addEventListener("keydown", handleTabKeydown);
+    listen(rootElement, "click", handleTabClick as EventListener);
+    listen(rootElement, "keydown", handleTabKeydown as EventListener);
 
     const tabs = getTabs(rootElement);
     const selectedTab =
@@ -932,12 +1165,12 @@
     },
   };
 
-  function resolveDragdropBoard(target) {
+  function resolveDragdropBoard(target: LegacyTarget): Element | null {
     if (!target) {
       return null;
     }
 
-    if (target.jquery) {
+    if (isLegacyCollection(target)) {
       return resolveDragdropBoard(target[0]);
     }
 
@@ -945,7 +1178,7 @@
       return document.querySelector(target);
     }
 
-    if (target.nodeType === 1) {
+    if (isElement(target)) {
       if (target.matches(dragdropBoardSelector)) {
         return target;
       }
@@ -956,21 +1189,21 @@
     return null;
   }
 
-  function getDragdropItems(column) {
+  function getDragdropItems(column: Element): Element[] {
     return Array.from(column.querySelectorAll(dragdropItemSelector)).filter(
       (item) => item.closest(dragdropColumnSelector) === column
     );
   }
 
-  function getDragdropColumnId(column) {
+  function getDragdropColumnId(column: Element): string | null {
     return column.getAttribute("data-column") || column.id || null;
   }
 
-  function getDragdropIndex(item, column) {
+  function getDragdropIndex(item: Element, column: Element): number {
     return getDragdropItems(column).indexOf(item);
   }
 
-  function getDragdropInsertBefore(column, clientY) {
+  function getDragdropInsertBefore(column: Element, clientY: number): Element | null {
     return getDragdropItems(column)
       .filter((item) => !item.classList.contains("is-dragging"))
       .reduce(
@@ -984,11 +1217,11 @@
 
           return closest;
         },
-        { offset: Number.NEGATIVE_INFINITY, item: null }
+        { offset: Number.NEGATIVE_INFINITY, item: null as Element | null }
       ).item;
   }
 
-  function createDragdropPayload(originalEvent, toColumn) {
+  function createDragdropPayload(originalEvent: Event, toColumn: Element | null): LegacyDragdropPayload | null {
     if (!dragdropState) {
       return null;
     }
@@ -1008,16 +1241,20 @@
     };
   }
 
-  function callDragdropCallback(board, name, payload) {
+  function callDragdropCallback(
+    board: Element,
+    name: keyof LegacyDragdropOptions,
+    payload: LegacyDragdropPayload | null
+  ): void {
     const options = dragdropOptions.get(board) || {};
     const callback = options[name];
 
     if (typeof callback === "function") {
-      callback.call(board, payload);
+      callback.call(board, payload as LegacyDragdropPayload);
     }
   }
 
-  function clearDragdropState() {
+  function clearDragdropState(): void {
     if (dragdropState) {
       dragdropState.item.classList.remove("is-dragging");
       dragdropState.board
@@ -1028,9 +1265,10 @@
     dragdropState = null;
   }
 
-  function handleDragdropStart(event) {
-    const item = event.target.closest(dragdropItemSelector);
-    const board = resolveDragdropBoard(event.currentTarget);
+  function handleDragdropStart(event: DragEvent): void {
+    const target = eventTargetElement(event);
+    const item = target ? target.closest(dragdropItemSelector) : null;
+    const board = resolveDragdropBoard(currentTargetElement(event));
 
     if (!item || !board || !board.contains(item)) {
       return;
@@ -1059,12 +1297,13 @@
     callDragdropCallback(board, "onDrag", createDragdropPayload(event, fromColumn));
   }
 
-  function handleDragdropOver(event) {
+  function handleDragdropOver(event: DragEvent): void {
     if (!dragdropState) {
       return;
     }
 
-    const column = event.target.closest(dragdropColumnSelector);
+    const target = eventTargetElement(event);
+    const column = target ? target.closest(dragdropColumnSelector) : null;
 
     if (!column || !dragdropState.board.contains(column)) {
       return;
@@ -1090,12 +1329,13 @@
     column.insertBefore(dragdropState.item, insertBefore);
   }
 
-  function handleDragdropDrop(event) {
+  function handleDragdropDrop(event: DragEvent): void {
     if (!dragdropState) {
       return;
     }
 
-    const column = event.target.closest(dragdropColumnSelector);
+    const target = eventTargetElement(event);
+    const column = target ? target.closest(dragdropColumnSelector) : null;
 
     if (!column || !dragdropState.board.contains(column)) {
       return;
@@ -1104,6 +1344,11 @@
     event.preventDefault();
 
     const payload = createDragdropPayload(event, column);
+
+    if (!payload) {
+      return;
+    }
+
     const changedColumn = payload.fromColumn !== payload.toColumn;
     const changedIndex = payload.fromIndex !== payload.toIndex;
 
@@ -1118,11 +1363,11 @@
     clearDragdropState();
   }
 
-  function handleDragdropEnd() {
+  function handleDragdropEnd(): void {
     clearDragdropState();
   }
 
-  function setupDragdrop(target, options) {
+  function setupDragdrop(target: LegacyTarget, options?: LegacyDragdropOptions): Element | null {
     const board = resolveDragdropBoard(target);
 
     if (!board) {
@@ -1146,10 +1391,10 @@
     }
 
     wiredDragdropBoards.add(board);
-    board.addEventListener("dragstart", handleDragdropStart);
-    board.addEventListener("dragover", handleDragdropOver);
-    board.addEventListener("drop", handleDragdropDrop);
-    board.addEventListener("dragend", handleDragdropEnd);
+    listen(board, "dragstart", handleDragdropStart as EventListener);
+    listen(board, "dragover", handleDragdropOver as EventListener);
+    listen(board, "drop", handleDragdropDrop as EventListener);
+    listen(board, "dragend", handleDragdropEnd);
 
     return board;
   }
@@ -1160,12 +1405,12 @@
     },
   };
 
-  function resolveMultiselect(target) {
+  function resolveMultiselect(target: LegacyTarget): HTMLSelectElement | null {
     if (!target) {
       return null;
     }
 
-    if (target.jquery) {
+    if (isLegacyCollection(target)) {
       return resolveMultiselect(target[0]);
     }
 
@@ -1173,11 +1418,11 @@
       return resolveMultiselect(document.querySelector(target));
     }
 
-    if (target.nodeType !== 1) {
+    if (!isElement(target)) {
       return null;
     }
 
-    if (target.matches("select[multiple]")) {
+    if (isSelectElement(target) && target.matches("select[multiple]")) {
       return target;
     }
 
@@ -1185,14 +1430,16 @@
       ? target
       : target.closest(".multiselect");
 
-    return rootElement ? rootElement.previousElementSibling : null;
+    return rootElement && isSelectElement(rootElement.previousElementSibling)
+      ? rootElement.previousElementSibling
+      : null;
   }
 
-  function getMultiselectPlaceholder(select) {
+  function getMultiselectPlaceholder(select: HTMLSelectElement): string {
     return select.getAttribute("data-placeholder") || "Select options";
   }
 
-  function getMultiselectName(select) {
+  function getMultiselectName(select: HTMLSelectElement): string {
     const ariaLabel = select.getAttribute("aria-label");
 
     if (ariaLabel) {
@@ -1206,17 +1453,17 @@
     try {
       const label = document.querySelector('label[for="' + CSS.escape(select.id) + '"]');
 
-      return label ? label.textContent.trim() : "";
+      return label && label.textContent ? label.textContent.trim() : "";
     } catch (error) {
       return "";
     }
   }
 
-  function getMultiselectSelectedOptions(select) {
+  function getMultiselectSelectedOptions(select: HTMLSelectElement): HTMLOptionElement[] {
     return Array.from(select.options).filter((option) => option.selected);
   }
 
-  function getMultiselectButtonText(select) {
+  function getMultiselectButtonText(select: HTMLSelectElement): string {
     const selectedOptions = getMultiselectSelectedOptions(select);
 
     if (selectedOptions.length === 0) {
@@ -1230,11 +1477,11 @@
     return selectedOptions.length + " selected";
   }
 
-  function getMultiselectOptions(rootElement) {
-    return Array.from(rootElement.querySelectorAll(".multiselect-option"));
+  function getMultiselectOptions(rootElement: Element): HTMLButtonElement[] {
+    return Array.from(rootElement.querySelectorAll<HTMLButtonElement>(".multiselect-option"));
   }
 
-  function updateMultiselect(select) {
+  function updateMultiselect(select: HTMLSelectElement): HTMLSelectElement {
     const state = multiselectMap.get(select);
 
     if (!state) {
@@ -1255,7 +1502,11 @@
     return select;
   }
 
-  function closeMultiselect(select) {
+  function closeMultiselect(select: HTMLSelectElement | null): HTMLSelectElement | null {
+    if (!select) {
+      return null;
+    }
+
     const state = multiselectMap.get(select);
 
     if (!state) {
@@ -1268,7 +1519,11 @@
     return select;
   }
 
-  function openMultiselect(select) {
+  function openMultiselect(select: HTMLSelectElement | null): HTMLSelectElement | null {
+    if (!select) {
+      return null;
+    }
+
     const state = multiselectMap.get(select);
 
     if (!state || select.disabled) {
@@ -1278,7 +1533,7 @@
     document.querySelectorAll(".multiselect.is-open").forEach((rootElement) => {
       const currentSelect = rootElement.previousElementSibling;
 
-      if (currentSelect !== select) {
+      if (isSelectElement(currentSelect) && currentSelect !== select) {
         closeMultiselect(currentSelect);
       }
     });
@@ -1289,7 +1544,11 @@
     return select;
   }
 
-  function toggleMultiselect(select) {
+  function toggleMultiselect(select: HTMLSelectElement | null): HTMLSelectElement | null {
+    if (!select) {
+      return null;
+    }
+
     const state = multiselectMap.get(select);
 
     if (!state) {
@@ -1301,7 +1560,7 @@
       : openMultiselect(select);
   }
 
-  function toggleMultiselectOption(select, index) {
+  function toggleMultiselectOption(select: HTMLSelectElement, index: number): void {
     const option = select.options[index];
 
     if (!option || option.disabled || select.disabled) {
@@ -1313,7 +1572,7 @@
     select.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function focusMultiselectOption(rootElement, index) {
+  function focusMultiselectOption(rootElement: Element, index: number): void {
     const options = getMultiselectOptions(rootElement).filter((option) => !option.disabled);
     const option = options[index];
 
@@ -1322,9 +1581,10 @@
     }
   }
 
-  function handleMultiselectClick(event) {
-    const select = resolveMultiselect(event.currentTarget);
-    const option = event.target.closest(".multiselect-option");
+  function handleMultiselectClick(event: MouseEvent): void {
+    const select = resolveMultiselect(currentTargetElement(event));
+    const target = eventTargetElement(event);
+    const option = target ? target.closest(".multiselect-option") : null;
 
     if (!select) {
       return;
@@ -1335,16 +1595,17 @@
       return;
     }
 
-    if (event.target.closest(".multiselect-toggle")) {
+    if (target && target.closest(".multiselect-toggle")) {
       toggleMultiselect(select);
     }
   }
 
-  function handleMultiselectKeydown(event) {
-    const select = resolveMultiselect(event.currentTarget);
+  function handleMultiselectKeydown(event: KeyboardEvent): void {
+    const select = resolveMultiselect(currentTargetElement(event));
     const state = select ? multiselectMap.get(select) : null;
+    const target = eventTargetElement(event);
 
-    if (!state) {
+    if (!state || !target || !select) {
       return;
     }
 
@@ -1365,7 +1626,7 @@
     }
 
     const options = getMultiselectOptions(state.root).filter((option) => !option.disabled);
-    const currentIndex = options.indexOf(event.target);
+    const currentIndex = options.indexOf(target as HTMLButtonElement);
 
     if (currentIndex < 0) {
       return;
@@ -1385,19 +1646,29 @@
       focusMultiselectOption(state.root, options.length - 1);
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      toggleMultiselectOption(select, Number(event.target.getAttribute("data-index")));
+      toggleMultiselectOption(select, Number(target.getAttribute("data-index")));
     }
   }
 
-  function handleDocumentMultiselectClick(event) {
+  function handleDocumentMultiselectClick(event: MouseEvent): void {
+    const target = eventTargetElement(event);
+
+    if (!target) {
+      return;
+    }
+
     document.querySelectorAll(".multiselect.is-open").forEach((rootElement) => {
-      if (!rootElement.contains(event.target)) {
-        closeMultiselect(rootElement.previousElementSibling);
+      if (!rootElement.contains(target)) {
+        closeMultiselect(
+          isSelectElement(rootElement.previousElementSibling)
+            ? rootElement.previousElementSibling
+            : null
+        );
       }
     });
   }
 
-  function createMultiselectOption(option, index, rootId) {
+  function createMultiselectOption(option: HTMLOptionElement, index: number, rootId: string): HTMLButtonElement {
     const button = document.createElement("button");
 
     button.className = "multiselect-option";
@@ -1410,7 +1681,7 @@
     return button;
   }
 
-  function setupMultiselect(target) {
+  function setupMultiselect(target: LegacyTarget): HTMLSelectElement | null {
     const select = resolveMultiselect(target);
 
     if (!select || !select.matches("select[multiple]")) {
@@ -1499,12 +1770,12 @@
     },
   };
 
-  function resolvePagination(target) {
+  function resolvePagination(target: LegacyTarget): Element | null {
     if (!target) {
       return null;
     }
 
-    if (target.jquery) {
+    if (isLegacyCollection(target)) {
       return resolvePagination(target[0]);
     }
 
@@ -1512,7 +1783,7 @@
       return document.querySelector(target);
     }
 
-    if (target.nodeType === 1) {
+    if (isElement(target)) {
       if (target.matches(paginationSelector)) {
         return target;
       }
@@ -1523,13 +1794,13 @@
     return null;
   }
 
-  function getPaginationNumber(value, fallback) {
+  function getPaginationNumber(value: unknown, fallback: number): number {
     const number = Number(value);
 
     return Number.isFinite(number) && number > 0 ? number : fallback;
   }
 
-  function getPaginationPageSizes(rootElement, options) {
+  function getPaginationPageSizes(rootElement: Element, options: LegacyPaginationSetupOptions): number[] {
     const configured =
       options.pageSizes ||
       rootElement.getAttribute("data-page-sizes") ||
@@ -1544,11 +1815,13 @@
     return sizes.length > 0 ? sizes : [10, 25, 50];
   }
 
-  function getPaginationTarget(rootElement, options) {
+  function getPaginationTarget(rootElement: Element, options: LegacyPaginationSetupOptions): Element | null {
     if (options.target) {
       return typeof options.target === "string"
         ? document.querySelector(options.target)
-        : options.target;
+        : options.target instanceof Element
+          ? options.target
+          : null;
     }
 
     const selector = rootElement.getAttribute("data-target");
@@ -1556,7 +1829,11 @@
     return selector ? document.querySelector(selector) : null;
   }
 
-  function createPaginationResult(rootElement, options, state) {
+  function createPaginationResult(
+    rootElement: Element,
+    options: LegacyPaginationOptions,
+    state: LegacyPaginationState
+  ): Promise<unknown> | unknown {
     if (typeof options.load === "function") {
       return options.load.call(rootElement, {
         page: state.page,
@@ -1574,8 +1851,12 @@
     };
   }
 
-  function normalizePaginationResult(result, state) {
-    const payload = Array.isArray(result) ? { items: result, total: result.length } : result || {};
+  function normalizePaginationResult(result: unknown, state: LegacyPaginationState): LegacyPaginationResult {
+    const payload: LegacyPaginationPayload = Array.isArray(result)
+      ? { items: result, total: result.length }
+      : result && typeof result === "object"
+        ? result
+        : {};
     const items = Array.isArray(payload.items) ? payload.items : [];
     const total = getPaginationNumber(payload.total, items.length);
     const pageCount = Math.max(1, Math.ceil(total / state.pageSize));
@@ -1589,7 +1870,12 @@
     };
   }
 
-  function renderPaginationItem(item, index, options, state) {
+  function renderPaginationItem(
+    item: unknown,
+    index: number,
+    options: LegacyPaginationOptions,
+    state: LegacyPaginationResult
+  ): Element | DocumentFragment | string | null | undefined {
     if (typeof options.renderItem === "function") {
       return options.renderItem(item, index, state);
     }
@@ -1607,7 +1893,7 @@
     return row;
   }
 
-  function renderPaginationItems(rootElement, result) {
+  function renderPaginationItems(rootElement: Element, result: LegacyPaginationResult): void {
     const options = paginationOptions.get(rootElement) || {};
     const target = options.target;
 
@@ -1627,8 +1913,8 @@
     });
   }
 
-  function getPaginationPages(currentPage, pageCount, maxPages) {
-    const pages = [];
+  function getPaginationPages(currentPage: number, pageCount: number, maxPages: number): LegacyPageToken[] {
+    const pages: LegacyPageToken[] = [];
 
     if (pageCount <= maxPages) {
       for (let page = 1; page <= pageCount; page += 1) {
@@ -1661,7 +1947,7 @@
     return pages;
   }
 
-  function createPaginationButton(label, action, disabled) {
+  function createPaginationButton(label: string, action: LegacyPaginationAction, disabled: boolean): HTMLButtonElement {
     const button = document.createElement("button");
 
     button.type = "button";
@@ -1672,7 +1958,7 @@
     return button;
   }
 
-  function renderPaginationControls(rootElement, result) {
+  function renderPaginationControls(rootElement: Element, result: LegacyPaginationResult): void {
     const options = paginationOptions.get(rootElement) || {};
     const pageCount = result.pageCount;
     const page = Math.min(result.page, pageCount);
@@ -1718,7 +2004,9 @@
     size.className = "pagination-size";
     label.textContent = "Page size";
 
-    options.pageSizes.forEach((pageSize) => {
+    const pageSizes = options.pageSizes || [result.pageSize];
+
+    pageSizes.forEach((pageSize) => {
       const option = document.createElement("option");
 
       option.value = String(pageSize);
@@ -1733,14 +2021,19 @@
     rootElement.replaceChildren(summary, pages, size);
   }
 
-  function setPaginationLoading(rootElement, loading) {
+  function setPaginationLoading(rootElement: Element, loading: boolean): void {
     rootElement.setAttribute("aria-busy", loading ? "true" : "false");
-    rootElement.querySelectorAll("button, select").forEach((control) => {
+    rootElement.querySelectorAll<HTMLButtonElement | HTMLSelectElement>("button, select").forEach((control) => {
       control.disabled = loading;
     });
   }
 
-  function handlePaginationError(rootElement, state, request, error) {
+  function handlePaginationError(
+    rootElement: Element,
+    state: LegacyPaginationState,
+    request: number,
+    error: unknown
+  ): void {
     if (request !== state.request) {
       return;
     }
@@ -1759,11 +2052,11 @@
     );
   }
 
-  function updatePagination(rootElement) {
+  function updatePagination(rootElement: Element | null): Element | null {
     const options = rootElement ? paginationOptions.get(rootElement) : null;
     const state = rootElement ? paginationState.get(rootElement) : null;
 
-    if (!options || !state) {
+    if (!rootElement || !options || !state) {
       return rootElement;
     }
 
@@ -1803,7 +2096,7 @@
     return rootElement;
   }
 
-  function setPaginationPage(rootElement, page) {
+  function setPaginationPage(rootElement: Element | null, page: number | string | null): Element | null {
     const state = rootElement ? paginationState.get(rootElement) : null;
 
     if (!state) {
@@ -1815,7 +2108,7 @@
     return updatePagination(rootElement);
   }
 
-  function setPaginationPageSize(rootElement, pageSize) {
+  function setPaginationPageSize(rootElement: Element | null, pageSize: number | string): Element | null {
     const state = rootElement ? paginationState.get(rootElement) : null;
 
     if (!state) {
@@ -1828,9 +2121,10 @@
     return updatePagination(rootElement);
   }
 
-  function handlePaginationClick(event) {
-    const rootElement = resolvePagination(event.currentTarget);
-    const button = event.target.closest("[data-pagination-action]");
+  function handlePaginationClick(event: MouseEvent): void {
+    const rootElement = resolvePagination(currentTargetElement(event));
+    const target = eventTargetElement(event);
+    const button = target ? target.closest<HTMLButtonElement>("[data-pagination-action]") : null;
     const state = rootElement ? paginationState.get(rootElement) : null;
 
     if (!button || !state || button.disabled) {
@@ -1848,20 +2142,23 @@
     }
   }
 
-  function handlePaginationChange(event) {
-    if (event.target.matches("[data-pagination-size]")) {
-      setPaginationPageSize(event.currentTarget, event.target.value);
+  function handlePaginationChange(event: Event): void {
+    const target = eventTargetElement(event);
+    const rootElement = resolvePagination(currentTargetElement(event));
+
+    if (isSelectElement(target) && rootElement && target.matches("[data-pagination-size]")) {
+      setPaginationPageSize(rootElement, target.value);
     }
   }
 
-  function setupPagination(target, options) {
+  function setupPagination(target: LegacyTarget, options: LegacyPaginationSetupOptions = {}): Element | null {
     const rootElement = resolvePagination(target);
 
     if (!rootElement) {
       return null;
     }
 
-    const nextOptions = Object.assign({}, paginationOptions.get(rootElement), options || {});
+    const nextOptions: LegacyPaginationSetupOptions = Object.assign({}, paginationOptions.get(rootElement), options || {});
 
     nextOptions.target = getPaginationTarget(rootElement, nextOptions);
     nextOptions.pageSizes = getPaginationPageSizes(rootElement, nextOptions);
@@ -1874,12 +2171,22 @@
       7
     );
 
-    paginationOptions.set(rootElement, nextOptions);
+    const normalizedOptions: LegacyPaginationOptions = {
+      data: nextOptions.data,
+      load: nextOptions.load,
+      maxPages: nextOptions.maxPages,
+      pageSize: nextOptions.pageSize,
+      pageSizes: nextOptions.pageSizes,
+      renderItem: nextOptions.renderItem,
+      target: isElement(nextOptions.target) ? nextOptions.target : null,
+    };
+
+    paginationOptions.set(rootElement, normalizedOptions);
 
     if (paginationState.has(rootElement)) {
       const state = paginationState.get(rootElement);
 
-      if (options && options.pageSize) {
+      if (state && options.pageSize) {
         state.page = 1;
         state.pageSize = nextOptions.pageSize;
       }
@@ -1893,8 +2200,8 @@
 
     if (!wiredPaginations.has(rootElement)) {
       wiredPaginations.add(rootElement);
-      rootElement.addEventListener("click", handlePaginationClick);
-      rootElement.addEventListener("change", handlePaginationChange);
+      listen(rootElement, "click", handlePaginationClick as EventListener);
+      listen(rootElement, "change", handlePaginationChange);
     }
 
     updatePagination(rootElement);
@@ -1969,7 +2276,7 @@
           return;
         }
 
-        legacy.toast.show(this, action);
+        legacy.toast.show(this, typeof action === "object" ? action : undefined);
       });
     };
   }
@@ -1977,7 +2284,7 @@
   if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.tabs) {
     root.jQuery.fn.tabs = function (action, index) {
       return this.each(function () {
-        if (action === "select") {
+        if (action === "select" && index !== undefined) {
           legacy.tabs.select(this, index);
           return;
         }
@@ -2044,12 +2351,12 @@
   if (root.jQuery && root.jQuery.fn && !root.jQuery.fn.pagination) {
     root.jQuery.fn.pagination = function (action, value) {
       return this.each(function () {
-        if (action === "goTo") {
+        if (action === "goTo" && value !== undefined) {
           legacy.pagination.goTo(this, value);
           return;
         }
 
-        if (action === "pageSize") {
+        if (action === "pageSize" && value !== undefined) {
           legacy.pagination.pageSize(this, value);
           return;
         }
@@ -2059,7 +2366,7 @@
           return;
         }
 
-        legacy.pagination.setup(this, action);
+        legacy.pagination.setup(this, typeof action === "object" ? action : undefined);
       });
     };
   }

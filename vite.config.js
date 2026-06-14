@@ -1,19 +1,23 @@
 import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const minify = mode !== "development";
+
+  return {
   build: {
     emptyOutDir: false,
     lib: {
-      entry: "src/legacy.js",
+      entry: "src/legacy.ts",
       formats: ["iife"],
       name: "LegacyCssBundle",
     },
-    minify: "oxc",
+    minify: minify ? "oxc" : false,
     outDir: "dist",
     rollupOptions: {
       output: {
-        entryFileNames: "legacy.min.js",
+        entryFileNames: minify ? "legacy.min.js" : "legacy.js",
       },
     },
   },
+  };
 });

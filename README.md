@@ -112,13 +112,13 @@ src/
   toast.css
   badges.css
   utilities.css
-  legacy.js
+  legacy.ts
 dist/
 docs/
 ```
 
 `src/legacy.css` is the main entry point and imports the other files in order.
-`src/legacy.js` contains the optional browser behavior for tabs, popovers, modal dialogs, toast notifications, multiselect controls, drag/drop boards, and pagination.
+`src/legacy.ts` contains the optional browser behavior for tabs, popovers, modal dialogs, toast notifications, multiselect controls, drag/drop boards, and pagination.
 
 ## Scripts
 
