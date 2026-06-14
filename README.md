@@ -1,6 +1,6 @@
 # legacy.css
 
-[![Unit coverage](https://img.shields.io/badge/unit%20coverage-71.48%25-yellowgreen)](https://github.com/moisesduartem/legacy.css/actions/workflows/unit-tests.yml)
+[![Unit coverage](https://codecov.io/gh/moisesduartem/legacy.css/branch/main/graph/badge.svg?flag=unit)](https://codecov.io/gh/moisesduartem/legacy.css)
 
 `legacy.css` is a classless CSS framework for administrative and corporate interfaces. It is inspired by the visual language of classic business, public-sector, and back-office web systems from the 2000s.
 
