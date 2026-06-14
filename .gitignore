@@ -1,5 +1,6 @@
 node_modules/
 .pnpm-store/
+coverage/
 dist/*.css.map
 npm-debug.log*
 .DS_Store
